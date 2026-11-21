@@ -23,6 +23,7 @@ type Options struct {
 	MigrateConfig bool
 	ListModules   bool
 	ListLogos     bool
+	Licenses      bool
 	Verbose       bool
 	Debug         bool
 	ShowErrors    bool
@@ -52,6 +53,7 @@ func Parse(args []string) (Options, error) {
 	set.BoolVar(&o.MigrateConfig, "migrate-config", false, "Convert the legacy TOML config to YAML without changing the original")
 	set.BoolVar(&o.ListModules, "list-modules", false, "List available modules")
 	set.BoolVar(&o.ListLogos, "list-logos", false, "List available logos")
+	set.BoolVar(&o.Licenses, "licenses", false, "Print the hexfetch license and third-party notices")
 	set.BoolVar(&o.Verbose, "verbose", false, "Show module categories and descriptions with --list-modules")
 	set.BoolVar(&o.Debug, "debug", false, "Show diagnostic details and skipped modules")
 	set.BoolVar(&o.ShowErrors, "show-errors", false, "Show skipped modules and their reasons")
@@ -132,6 +134,7 @@ Examples:
   hexfetch --migrate-config
   hexfetch --list-modules
   hexfetch --list-logos
+  hexfetch --licenses
   hexfetch --list-modules --verbose
   hexfetch --debug -s "title:memory:cpu"
   hexfetch --quiet

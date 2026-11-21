@@ -292,6 +292,7 @@ def main():
     if unknown:
         raise Fail(f"unknown targets: {', '.join(unknown)}")
     branch, project = preflight()
+    sh(sys.executable, ROOT / "licenses.py", "--check")
     known = remote_tags()
     current = read_version()
     version = args.version or (current if f"v{current}" not in known else bump(current, known))
@@ -313,6 +314,8 @@ def main():
         binaries = build_all(names, version, stage, args.workers)
         verify_binaries(binaries, version)
         (stage / "SHA256SUMS").write_text("".join(f"{sha256(path)}  {path.name}\n" for path in binaries))
+        for name in ("LICENSE", "THIRD_PARTY_LICENSES"):
+            shutil.copy2(ROOT / name, stage / name)
         if previous:
             compare = f"[{previous}...{tag}](https://github.com/{project}/compare/{previous}...{tag})"
         else:
@@ -329,7 +332,7 @@ def main():
         (stage / "RELEASE_NOTES.md").write_text(body)
         shutil.rmtree(dest, ignore_errors=True)
         stage.rename(dest)
-        assets = [dest / path.name for path in binaries] + [dest / "SHA256SUMS"]
+        assets = [dest / path.name for path in binaries] + [dest / "SHA256SUMS", dest / "LICENSE", dest / "THIRD_PARTY_LICENSES"]
         log(f"built {len(binaries)} binaries in {dest}")
         if args.dry_run:
             log("dry run: nothing was committed or published")

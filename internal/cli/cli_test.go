@@ -154,3 +154,13 @@ func TestParseListLogos(t *testing.T) {
 		t.Fatal("help output does not contain --list-logos")
 	}
 }
+
+func TestParseLicenses(t *testing.T) {
+	options, err := Parse([]string{"--licenses"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !options.Licenses {
+		t.Fatal("--licenses did not enable Licenses")
+	}
+}

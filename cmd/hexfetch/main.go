@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	legal "hexfetch"
 	"hexfetch/internal/cli"
 	"hexfetch/internal/config"
 	"hexfetch/internal/diag"
@@ -60,6 +61,11 @@ func run(args []string) int {
 		for _, name := range logo.Names() {
 			fmt.Println(name)
 		}
+		return 0
+	case opts.Licenses:
+		fmt.Println(strings.TrimSpace(legal.License))
+		fmt.Println()
+		fmt.Println(strings.TrimSpace(legal.ThirdParty))
 		return 0
 	case opts.GenConfig:
 		return generateConfig(opts)

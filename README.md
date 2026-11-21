@@ -518,11 +518,13 @@ modules/           one file per module, plus testdata/ fixtures
 
 **Adding a module.** Create one file in `modules/` that registers the module in `init()` with `Register`, and add an entry to `modules/metadata.go` so that `--list-modules --verbose` shows its category and description.
 
-**Releases.** `release.py` builds the six targets (`-trimpath`, stripped, `CGO_ENABLED=0`), writes `SHA256SUMS`, fills `release_template.md` and uploads the assets with `gh`.
+**Releases.** `release.py` builds the six targets (`-trimpath`, stripped, `CGO_ENABLED=0`), writes `SHA256SUMS`, attaches `LICENSE` and `THIRD_PARTY_LICENSES`, fills `release_template.md` and uploads the assets with `gh`.
 
 ## Credits
 
 The distribution logos are derived from the [fastfetch](https://github.com/fastfetch-cli/fastfetch) project (MIT License). See [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES). The `hexos` logo is original to hexfetch.
+
+hexfetch is an independent project and is not affiliated with or endorsed by fastfetch. Distribution names and logos belong to their respective owners and are included for identification only. Notices for all bundled third-party code and data, including the Go dependencies, are in [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) and are embedded in every binary: `hexfetch --licenses`.
 
 ## License
 

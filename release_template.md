@@ -25,6 +25,10 @@ Static binaries without dependencies. Pick the file for your platform in the Ass
 2. Verify: `sha256sum -c SHA256SUMS --ignore-missing`
 3. Make it executable and put it in your `PATH`: `chmod +x hexfetch_* && mv hexfetch_* ~/.local/bin/hexfetch`
 
+## Licenses
+
+`LICENSE` and `THIRD_PARTY_LICENSES` are attached to this release. The same texts are embedded in the binary: run `hexfetch --licenses`.
+
 ## Quick start
 
     hexfetch

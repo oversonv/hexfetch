@@ -411,3 +411,14 @@ func TestRunLogoNoneHidesLogo(t *testing.T) {
 		t.Fatalf("logo none still printed a logo: %q", output)
 	}
 }
+
+func TestRunLicenses(t *testing.T) {
+	output := captureStdout(t, func() {
+		if code := run([]string{"--licenses"}); code != 0 {
+			t.Errorf("run(--licenses) = %d, want 0", code)
+		}
+	})
+	if !strings.Contains(output, "MIT License") || !strings.Contains(output, "fastfetch") {
+		t.Fatalf("--licenses output is incomplete: %.200q", output)
+	}
+}
