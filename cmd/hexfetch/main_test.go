@@ -160,8 +160,12 @@ func TestDefaultConfigurationRendersTitleAndSeparator(t *testing.T) {
 	if err := render.Render(&output, entries, render.Options{SeparatorColor: string(cfg.Display.Color.Separator)}); err != nil {
 		t.Fatal(err)
 	}
-	if output.String() != "Welcome!\n--------\n" {
+	lines := strings.Split(strings.TrimSuffix(output.String(), "\n"), "\n")
+	if len(lines) != 2 || !strings.Contains(lines[0], "@") {
 		t.Fatalf("default title and separator output = %q", output.String())
+	}
+	if lines[1] != strings.Repeat("-", len(lines[0])) {
+		t.Fatalf("default separator = %q, want %d dashes", lines[1], len(lines[0]))
 	}
 }
 

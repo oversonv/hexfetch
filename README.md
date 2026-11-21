@@ -92,9 +92,9 @@ Boolean flags also accept `=true` or `=false`.
 | `-p, --logo-position SIDE` | `left` | Logo side: `left` or `right` |
 | `--padding N` | `2` | Spaces between the logo and the modules |
 | `--logo-colors LIST` | built-in | `nixos_average` only: 12, 2 or 1 comma-separated `38;2;R;G;B` values |
-| `--separator STR` | `" » "` | Separator between key and value |
+| `--separator STR` | `": "` | Separator between key and value |
 | `--key-type TYPE` | `string` | Key display: `string`, `icon` or `both` |
-| `--color-keys N` | `4` | ANSI 256-color index for module keys (0–255) |
+| `--color-keys N` | from config (`1;35`) | ANSI 256-color index for module keys (0–255); overrides the config color |
 | `--no-color` | off | Disable all colors |
 | `--gen-config` | | Write the default YAML config. Never overwrites an existing file |
 | `--migrate-config` | | Convert the legacy TOML config to YAML ([details](#legacy-toml-migration)) |
@@ -111,7 +111,7 @@ Layout options (`--logo-position`, `--padding`) are CLI-only and are not stored 
 
 ## Configuration
 
-Defaults are built into the binary (`internal/config/default.yaml`, embedded with `go:embed`). Your personal file is `$HOME/hex/set/hexfetch.yaml`; it is layered on top of the defaults, so it only needs the settings you change. Use `-c PATH` to load another file. A missing default file is fine; a missing `-c` file produces a warning.
+Defaults are built into the binary (`internal/config/default.yaml`, embedded with `go:embed`) and mirror `fastfetch --config none`: same module list and order, separator `": "`, bold magenta keys and a bold blue title. Your personal file is `$HOME/hex/set/hexfetch.yaml`; it is layered on top of the defaults, so it only needs the settings you change. Use `-c PATH` to load another file. A missing default file is fine; a missing `-c` file produces a warning.
 
 ```sh
 hexfetch --gen-config
@@ -126,6 +126,7 @@ A Termux-style profile (Fastfetch-like icons, Python version via the `command` m
 
 ```yaml
 # hexfetch default configuration (embedded into the binary).
+# Mirrors the built-in defaults of `fastfetch --config none`.
 # Personal settings go to $HOME/hex/set/hexfetch.yaml and are layered on top of this file.
 # Create that file with: hexfetch --gen-config
 hexfetch:
@@ -149,29 +150,45 @@ hexfetch:
     - "38;2;107;106;255"
     - "38;2;79;185;254"
   display:
-    separator: " » "
+    separator: ": "
     separator_char: "-"
     color:
-      keys: "1;38;2;150;150;150"
-      title: "38;2;255;255;255"
-      output: "38;2;255;255;255"
-      separator: "38;2;130;140;138"
+      keys: "1;35"
+      title: "1;34"
+      output: ""
+      separator: ""
   modules:
+    # Same order as fastfetch's default structure (fastfetch "disk" is "disks" here).
     items:
       - title
       - separator
+      - os
+      - host
+      - kernel
+      - uptime
+      - packages
       - shell
-      - terminal
-      - terminalfont
-      - wm
+      - display
       - de
+      - wm
+      - wmtheme
       - theme
       - icons
+      - font
       - cursor
-      - packages
-      - uptime
-    title:
-      format: "Welcome!"
+      - terminal
+      - terminalfont
+      - cpu
+      - gpu
+      - memory
+      - swap
+      - disks
+      - localip
+      - battery
+      - poweradapter
+      - locale
+      - break
+      - colors
 ```
 
 </details>
@@ -184,9 +201,9 @@ Everything lives under the `hexfetch` key (the old `nixfetch` key is still accep
 | --- | --- | --- |
 | `logo` | string | `nixos_average` (default), any logo name or alias, `auto` or `none` ([Logo and colors](#logo-and-colors)) |
 | `logo_colors` | list of 1, 2 or 12 SGR strings | `nixos_average` gradient colors ([Logo and colors](#logo-and-colors)) |
-| `display.separator` | string | Text between key and value |
+| `display.separator` | string | Text between key and value (default `": "`) |
 | `display.separator_char` | string | Character used by `separator` modules (default `-`) |
-| `display.color.keys` / `title` / `output` / `separator` | color | Colors of keys, title, values and separator lines |
+| `display.color.keys` / `title` / `output` / `separator` | color | Colors of keys (default `1;35`), title (default `1;34`), values and separator lines (both unset by default) |
 | `display.key.type` | `string` \| `icon` \| `both` | Key display. `--key-type` overrides it |
 | `modules.items` | list of module names | Which modules run, and in which order |
 | `modules.<name>` | mapping | Settings of one module |
@@ -198,7 +215,7 @@ Everything lives under the `hexfetch` key (the old `nixfetch` key is still accep
 ### Selecting modules
 
 - A settings block does not enable a module. Add the module name to `modules.items`.
-- The default list starts with `title`, then `separator`. A custom list must include `title` explicitly to show it.
+- The default list starts with `title`, then `separator`, and otherwise follows fastfetch's default structure (`fastfetch`'s `disk` is `disks` here). A custom list must include `title` explicitly to show it.
 - A `separator` without a `title` is as wide as the widest output and produces a warning.
 - Repeating a name runs the module again with the same settings. Different settings per instance are not supported.
 - `--structure` replaces selection and order but reuses the YAML settings of each selected module.

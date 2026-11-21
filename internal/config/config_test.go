@@ -68,7 +68,7 @@ func TestDefaultEnablesTitleBeforeSeparator(t *testing.T) {
 	if !strings.Contains(DefaultYAML, "    separator_char: \"-\"") {
 		t.Fatal("DefaultYAML does not expose the separator character default")
 	}
-	if strings.Contains(DefaultYAML, "    command:") || len(cfg.Modules.Settings) != 1 {
+	if strings.Contains(DefaultYAML, "    command:") || len(cfg.Modules.Settings) != 0 {
 		t.Fatal("default config contains a dormant command module")
 	}
 	if !reflect.DeepEqual(cfg.LogoColors, logo.DefaultColors()) {
@@ -362,7 +362,7 @@ func TestInvalidModuleFieldsPreserveDefaultsAndValidNeighbors(t *testing.T) {
 	}
 	path := writeYAML(t, document)
 	loaded, diagnostics := loadYAML(cfg, mustRead(t, path), path)
-	if loaded.Modules.Settings["title"].Format != "Welcome!" {
+	if loaded.Modules.Settings["title"].Format != "" {
 		t.Fatalf("invalid title format replaced default: %+v", loaded.Modules.Settings["title"])
 	}
 	command := loaded.Modules.Settings["command"]
@@ -564,7 +564,7 @@ func TestSpecsForKeepsConfiguredModuleSettingsAndOrder(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("SpecsFor() diagnostics = %+v", diagnostics)
 	}
-	if len(specs) != 3 || specs[0].Type != "command" || specs[0].Key != "Python" || specs[0].Text != "python -V" || specs[1].Format != "Welcome!" || specs[2].Key != "Shell name" {
+	if len(specs) != 3 || specs[0].Type != "command" || specs[0].Key != "Python" || specs[0].Text != "python -V" || specs[1].Format != "" || specs[2].Key != "Shell name" {
 		t.Fatalf("SpecsFor() = %+v", specs)
 	}
 }
