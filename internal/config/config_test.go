@@ -137,6 +137,66 @@ func TestLoadYAMLDisplayModulesAndColors(t *testing.T) {
 	}
 }
 
+func TestTermuxFastfetchProfileLoadsWithoutWarnings(t *testing.T) {
+	profilePath := filepath.Join("..", "..", "hex", "hexfetch.yaml")
+	cfg, diagnostics := Load(profilePath)
+	for _, diagnostic := range diagnostics {
+		if diagnostic.Level >= diag.Warning {
+			t.Fatalf(
+				"Termux profile produced a warning or error: %+v",
+				diagnostic,
+			)
+		}
+	}
+	if cfg.Display.Separator != " » " || cfg.Display.SeparatorChar != "─" || cfg.Display.SeparatorLength != 18 {
+		t.Fatalf("Termux display config = %+v", cfg.Display)
+	}
+	if cfg.Display.KeyType != "both" {
+		t.Fatalf("key type = %q, want both", cfg.Display.KeyType)
+	}
+	wantColors := ColorConfig{
+		Keys:      "38;2;255;255;255",
+		Title:     "38;2;255;255;255",
+		Output:    "38;2;255;255;255",
+		Separator: "38;2;190;190;190",
+	}
+	if cfg.Display.Color != wantColors {
+		t.Fatalf("display colors = %+v, want %+v", cfg.Display.Color, wantColors)
+	}
+	wantItems := []string{"title", "separator", "os", "packages", "shell", "command", "terminal"}
+	if !reflect.DeepEqual(cfg.Modules.Items, wantItems) {
+		t.Fatalf("module order = %q, want %q", cfg.Modules.Items, wantItems)
+	}
+	wantModuleFields := map[string]struct {
+		key  string
+		icon string
+	}{
+		"os":       {key: "OS", icon: "\uf313"},
+		"packages": {key: "Packages", icon: "\uf487"},
+		"shell":    {key: "Shell", icon: "\uf489"},
+		"command":  {key: "Python", icon: "\ue73c"},
+		"terminal": {key: "Terminal", icon: "\uf489"},
+	}
+	for name, want := range wantModuleFields {
+		if got := cfg.Modules.Settings[name].Key; got != want.key {
+			t.Errorf("%s key = %q, want %q", name, got, want.key)
+		}
+		if got := cfg.Modules.Settings[name].KeyIcon; got != want.icon {
+			t.Errorf("%s key_icon = %q, want %q", name, got, want.icon)
+		}
+	}
+	if got := cfg.Modules.Settings["title"].Text; got != "You again?" {
+		t.Fatalf("title text = %q, want %q", got, "You again?")
+	}
+	if got := cfg.Modules.Settings["command"].Text; got != "python -V 2>&1 | cut -d' ' -f2" {
+		t.Fatalf("Python command = %q", got)
+	}
+	specs, specDiagnostics := cfg.Specs()
+	if len(specDiagnostics) != 0 || len(specs) != len(wantItems) {
+		t.Fatalf("Specs() = %d entries, diagnostics=%+v", len(specs), specDiagnostics)
+	}
+}
+
 func TestModuleItemsTrimWhitespaceAndKeepOrder(t *testing.T) {
 	cfg, diagnostics := Load(writeYAML(t, `hexfetch:
   modules:

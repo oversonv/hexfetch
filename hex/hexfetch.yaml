@@ -1,5 +1,3 @@
-# Termux profile matching the Fastfetch icons shown in the audit report.
-# Install as: $HOME/hex/hexfetch.yaml
 hexfetch:
   display:
     separator: " » "
@@ -7,6 +5,11 @@ hexfetch:
     separator_length: 18
     key:
       type: both
+    color:
+      keys: "38;2;255;255;255"
+      title: "38;2;255;255;255"
+      output: "38;2;255;255;255"
+      separator: "38;2;190;190;190"
   modules:
     items:
       - title
@@ -17,16 +20,20 @@ hexfetch:
       - command
       - terminal
     title:
-      format: "You again?"
+      text: "You again?"
     os:
-      key_icon: ""
+      key: "OS"
+      key_icon: "\uf313"
     packages:
-      key_icon: ""
+      key: "Packages"
+      key_icon: "\uf487"
     shell:
-      key_icon: ""
+      key: "Shell"
+      key_icon: "\uf489"
     command:
       key: "Python"
-      key_icon: ""
-      command: "python -c 'import platform; print(platform.python_version())'"
+      key_icon: "\ue73c"
+      text: "python -V 2>&1 | cut -d' ' -f2"
     terminal:
-      key_icon: ""
+      key: "Terminal"
+      key_icon: "\uf489"
