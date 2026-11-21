@@ -1,0 +1,47 @@
+# hexfetch default configuration (embedded into the binary).
+# Mirrors the built-in defaults of `fastfetch --config none`.
+# Personal settings go to $HOME/hex/set/hexfetch.yaml and are layered on top of this file.
+# Create that file with: hexfetch --gen-config
+hexfetch:
+  # Logo name, "auto" (pick from /etc/os-release) or "none". List names with: hexfetch --list-logos
+  logo: auto
+  display:
+    separator: ": "
+    separator_char: "-"
+    color:
+      keys: "1;35"
+      title: "1;34"
+      output: ""
+      separator: ""
+  modules:
+    # Same order as fastfetch's default structure (fastfetch "disk" is "disks" here).
+    items:
+      - title
+      - separator
+      - os
+      - host
+      - kernel
+      - uptime
+      - packages
+      - shell
+      - display
+      - de
+      - wm
+      - wmtheme
+      - theme
+      - icons
+      - font
+      - cursor
+      - terminal
+      - terminalfont
+      - cpu
+      - gpu
+      - memory
+      - swap
+      - disks
+      - localip
+      - battery
+      - poweradapter
+      - locale
+      - break
+      - colors

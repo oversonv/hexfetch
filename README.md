@@ -4,15 +4,13 @@
 
 **A fast system information fetch for Linux, in a single static Go binary.**
 
-Gradient nixos_average logo + 530 embedded distro logos · 62 modules · YAML configuration · x86, ARM, RISC-V and Termux
+530+ embedded distribution logos · 62 modules · YAML configuration · x86, ARM, RISC-V and Termux
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Platform: Linux](https://img.shields.io/badge/platform-linux-informational)
 ![Go 1.26+](https://img.shields.io/badge/Go-1.26%2B-00ADD8)
 
 [Install](#install) · [Quick start](#quick-start) · [Configuration](#configuration) · [Modules](#modules) · [Releases](https://github.com/oversonv/hexfetch/releases)
-
-<img src="docs/view.jpg" alt="hexfetch output in Termux: gradient logo on the left, module list on the right" width="720">
 
 <sub>Termux on Android (aarch64) with a customized module list.</sub>
 
@@ -24,10 +22,10 @@ Gradient nixos_average logo + 530 embedded distro logos · 62 modules · YAML co
 - **One file.** A 7–8 MiB binary with no runtime dependencies. Linux builds are fully static (`CGO_ENABLED=0`).
 - **Six targets.** `linux-amd64`, `linux-arm64`, `linux-armv7`, `linux-386`, `linux-riscv64` and `android-arm64` (Termux).
 - **62 modules** that run concurrently: system, software, desktop, hardware, network and media.
-- **Logos.** The default `nixos_average` logo has six gradient bands and 1, 2 or 12 configurable colors. 530+ distribution logos are embedded too (`--logo NAME`, `--logo auto`). Falls back to ANSI 256 colors automatically.
+- **Logos.** The system logo is selected automatically from `/etc/os-release`; a generic Linux logo is used when no distribution match is available. More than 530 distribution logos are embedded (`--logo NAME`, `--logo auto`). Color output falls back to ANSI 256 colors when required.
 - **Predictable configuration.** One YAML file; CLI flags override it; unknown or invalid settings produce a warning instead of a silent failure.
 - **Terminal-aware.** Output is clipped to the terminal width and the logo hides itself when there is no room.
-- **Tested without your hardware.** Module tests run against fixtures in `modules/testdata`.
+- **Tested without your hardware.** Module tests run against fixtures in `src/modules/testdata`.
 
 ## Install
 
@@ -63,7 +61,7 @@ Requires Go 1.26 or newer (see `go.mod`).
 ```sh
 git clone https://github.com/oversonv/hexfetch.git
 cd hexfetch
-CGO_ENABLED=0 go build -o hexfetch ./cmd/hexfetch
+CGO_ENABLED=0 go build -o hexfetch ./src/cmd/hexfetch
 ./hexfetch --version
 ```
 
@@ -88,10 +86,9 @@ Boolean flags also accept `=true` or `=false`.
 | --- | --- | --- |
 | `-c, --config PATH` | `$HOME/hex/set/hexfetch.yaml` | Personal YAML config file. Also the destination for `--gen-config` and `--migrate-config` |
 | `-s, --structure LIST` | from config | Colon-separated modules to print. Selection and order only; module settings still come from YAML |
-| `-l, --logo NAME` | `nixos_average` | Logo name or alias, `auto` (from `/etc/os-release`) or `none` |
+| `-l, --logo NAME` | `auto` | Logo name or alias, `auto` (from `/etc/os-release`) or `none` |
 | `-p, --logo-position SIDE` | `left` | Logo side: `left` or `right` |
 | `--padding N` | `2` | Spaces between the logo and the modules |
-| `--logo-colors LIST` | built-in | `nixos_average` only: 12, 2 or 1 comma-separated `38;2;R;G;B` values |
 | `--separator STR` | `": "` | Separator between key and value |
 | `--key-type TYPE` | `string` | Key display: `string`, `icon` or `both` |
 | `--color-keys N` | from config (`1;35`) | ANSI 256-color index for module keys (0–255); overrides the config color |
@@ -111,7 +108,7 @@ Layout options (`--logo-position`, `--padding`) are CLI-only and are not stored 
 
 ## Configuration
 
-Defaults are built into the binary (`internal/config/default.yaml`, embedded with `go:embed`) and mirror `fastfetch --config none`: same module list and order, separator `": "`, bold magenta keys and a bold blue title. Your personal file is `$HOME/hex/set/hexfetch.yaml`; it is layered on top of the defaults, so it only needs the settings you change. Use `-c PATH` to load another file. A missing default file is fine; a missing `-c` file produces a warning.
+Defaults are built into the binary (`src/internal/config/default.yaml`, embedded with `go:embed`) and mirror `fastfetch --config none`: same module list and order, separator `": "`, bold magenta keys and a bold blue title. Your personal file is `$HOME/hex/set/hexfetch.yaml`; it is layered on top of the defaults, so it only needs the settings you change. Use `-c PATH` to load another file. A missing default file is fine; a missing `-c` file produces a warning.
 
 ```sh
 hexfetch --gen-config
@@ -131,24 +128,7 @@ A Termux-style profile (Fastfetch-like icons, Python version via the `command` m
 # Create that file with: hexfetch --gen-config
 hexfetch:
   # Logo name, "auto" (pick from /etc/os-release) or "none". List names with: hexfetch --list-logos
-  logo: nixos_average
-  # Colors of the nixos_average logo only; other logos use their own flat colors.
-  # 12 colors: start and end color of each of the 6 gradient bands (the vanilla colors below).
-  # 2 colors: one start and one end color shared by all bands. 1 color: a flat logo.
-  # Remove the list to use the vanilla colors.
-  logo_colors:
-    - "38;2;133;104;242"
-    - "38;2;206;177;240"
-    - "38;2;107;106;255"
-    - "38;2;79;185;254"
-    - "38;2;206;177;240"
-    - "38;2;133;104;242"
-    - "38;2;79;185;254"
-    - "38;2;107;106;255"
-    - "38;2;206;177;240"
-    - "38;2;133;104;242"
-    - "38;2;107;106;255"
-    - "38;2;79;185;254"
+  logo: auto
   display:
     separator: ": "
     separator_char: "-"
@@ -199,8 +179,7 @@ Everything lives under the `hexfetch` key (the old `nixfetch` key is still accep
 
 | Key | Type | Description |
 | --- | --- | --- |
-| `logo` | string | `nixos_average` (default), any logo name or alias, `auto` or `none` ([Logo and colors](#logo-and-colors)) |
-| `logo_colors` | list of 1, 2 or 12 SGR strings | `nixos_average` gradient colors ([Logo and colors](#logo-and-colors)) |
+| `logo` | string | `auto` (default), any logo name or alias, or `none` ([Logo and colors](#logo-and-colors)) |
 | `display.separator` | string | Text between key and value (default `": "`) |
 | `display.separator_char` | string | Character used by `separator` modules (default `-`) |
 | `display.color.keys` / `title` / `output` / `separator` | color | Colors of keys (default `1;35`), title (default `1;34`), values and separator lines (both unset by default) |
@@ -321,37 +300,17 @@ The migration validates the converted settings and writes only supported, normal
 
 ## Logo and colors
 
-All logos are embedded in the binary (`logo/ascii/<letter>/<name>.txt`); hexfetch reads no logo files from disk. The default is `nixos_average`. Choose another one with `logo:` in YAML or `--logo`:
+All logos are embedded in the binary (`src/logo/ascii/<letter>/<name>.txt`); hexfetch reads no logo files from disk. The default `auto` mode selects a logo using `/etc/os-release` fields `ID`, `ID_LIKE` and `NAME`. If no distribution logo matches, the generic `linux` logo is used.
 
-- `--list-logos` prints every name. Aliases such as `amzn` or `hex` resolve to their logo.
-- `auto` picks the logo from `/etc/os-release` (`ID`, `ID_LIKE`, `NAME`). If nothing matches, `nixos_average` is used.
-- `none` prints no logo.
-- An unknown name prints a warning and `nixos_average` is used.
+- `--list-logos` prints every embedded name. Distribution aliases such as `amzn` resolve to their corresponding logo.
+- `--logo NAME` selects a specific embedded logo.
+- `--logo auto` selects a logo from the operating system metadata.
+- `--logo none` disables the logo.
+- An unknown logo name prints a warning and uses the generic `linux` logo.
 
-**nixos_average colors.** The `nixos_average` logo has six gradient bands with fixed geometry and direction. Only the endpoint colors are configurable through `logo_colors` (or `--logo-colors`):
+**Logo file format.** `$1`..`$9` switch to the corresponding flat color slot and `$$` prints a literal `$`. Each slot uses a color from `src/logo/colors.txt` (`name=sgr:34,sgr:37` or `name=79;157;207`).
 
-| Values | Meaning |
-| --- | --- |
-| none, or an empty list | The vanilla colors |
-| 12 | Start and end color of each band: values `2n+1` and `2n+2` belong to band `n` (bands 0–5) |
-| 2 | One start and one end color shared by all six bands |
-| 1 | One flat color for the whole logo |
-
-```sh
-hexfetch --logo-colors "38;2;255;94;98,38;2;255;153;102"   # every band: coral to orange
-hexfetch --logo-colors "38;2;255;94;98"                     # flat coral
-```
-
-- Each value must be `38;2;R;G;B` with channels 0–255.
-- Any other count (3–11, more than 12) is ignored with a warning and the vanilla colors are kept.
-- With 12 values an invalid item keeps its own default and valid neighbors stay active. With 1 or 2 values an invalid item rejects the whole list.
-- `--logo-colors` is applied on top of YAML. With 12 values an invalid item leaves the configured value unchanged.
-- Other logos use the flat colors from `logo/colors.txt` and ignore `logo_colors`.
-- Spaces are never colored, and every colored line ends with an ANSI reset.
-
-**Logo file format.** `$1`..`$9` switch to the corresponding color slot and `$$` prints a literal `$`. For classic logos each slot is one flat color from `logo/colors.txt` (`name=sgr:34,sgr:37` or `name=79;157;207`). For `nixos_average`, slot `n` is gradient band `n-1`.
-
-**Color depth.** hexfetch uses truecolor when `COLORTERM` is `truecolor` or `24bit`. Otherwise it also uses truecolor unless `TERM` is one of `linux`, `dumb`, `vt100`, `vt220`, `ansi` or `screen`, in which case the logo is converted to the nearest ANSI 256-color codes.
+**Color depth.** hexfetch uses truecolor when `COLORTERM` is `truecolor` or `24bit`. Otherwise it also uses truecolor unless `TERM` is one of `linux`, `dumb`, `vt100`, `vt220`, `ansi` or `screen`, in which case logo colors are converted to the nearest ANSI 256-color codes.
 
 ## Output behavior
 
@@ -519,30 +478,31 @@ go vet ./...
 go test ./...
 ```
 
-Module tests run against fixtures in `modules/testdata`, so they do not depend on the host system.
+Module tests run against fixtures in `src/modules/testdata`, so they do not depend on the host system.
 
 ```text
-cmd/hexfetch/      entry point and main flow
-internal/cli/      flag parsing
-internal/config/   YAML loading, validation, TOML migration
-internal/gradient/ gradient math and color-depth detection
-internal/logo/     logo catalog, parser and painters (classic and nixos_average)
-logo/              embedded logo art, colors.txt, aliases.txt
-internal/render/   layout, clipping, terminal width
-internal/diag/     diagnostics collector and printer
-modules/           one file per module, plus testdata/ fixtures
+src/cmd/hexfetch/      entry point and main flow
+src/internal/cli/      flag parsing
+src/internal/config/   YAML loading, validation, TOML migration
+src/internal/termcolor/ ANSI color conversion and color-depth detection
+src/internal/logo/     logo catalog and classic palette painter
+src/logo/              embedded logo art, colors.txt, aliases.txt
+src/internal/render/   layout, clipping, terminal width
+src/internal/diag/     diagnostics collector and printer
+src/modules/           one file per module, plus testdata/ fixtures
+src/legal/             embedded license texts
 ```
 
-**Adding a module.** Create one file in `modules/` that registers the module in `init()` with `Register`, and add an entry to `modules/metadata.go` so that `--list-modules --verbose` shows its category and description.
+**Adding a module.** Create one file in `src/modules/` that registers the module in `init()` with `Register`, and add an entry to `src/modules/metadata.go` so that `--list-modules --verbose` shows its category and description.
 
-**Releases.** `release.py` builds the six targets (`-trimpath`, stripped, `CGO_ENABLED=0`), writes `SHA256SUMS`, attaches `LICENSE` and `THIRD_PARTY_LICENSES`, fills `release_template.md` and uploads the assets with `gh`.
+**Releases.** `scripts/release.py` builds the six targets (`-trimpath`, stripped, `CGO_ENABLED=0`), writes `SHA256SUMS`, attaches `LICENSE` and `THIRD_PARTY_LICENSES`, fills `scripts/release_template.md` and uploads the assets with `gh`.
 
 ## Credits
 
-The distribution logos are derived from the [fastfetch](https://github.com/fastfetch-cli/fastfetch) project (MIT License). See [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES). The default `nixos_average` logo is a reduced adaptation of the NixOS logo: "NixOS Logo" by Simon Frankau, Tim Cuthbertson and Daniel Baker (maintained by the NixOS Marketing Team), from [nixos/branding](https://github.com/NixOS/branding), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Changes: redrawn at a smaller size with block characters and painted with configurable gradient colors. The adaptation is distributed under CC BY 4.0, not under the MIT license of the code. NixOS is a trademark of the NixOS Foundation.
+The distribution logos are derived from the [fastfetch](https://github.com/fastfetch-cli/fastfetch) project and are covered by the upstream MIT notices documented in [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES).
 
-hexfetch is an independent project and is not affiliated with or endorsed by fastfetch, the NixOS Foundation or the NixOS project. Distribution names and logos belong to their respective owners and are included for identification only. Notices for all bundled third-party code and data, including the Go dependencies, are in [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) and are embedded in every binary: `hexfetch --licenses`.
+hexfetch is an independent project and is not affiliated with or endorsed by fastfetch or any Linux distribution. Distribution names and logos belong to their respective owners and are included for identification only. Notices for bundled third-party assets and Go dependencies are in [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) and are embedded in every binary: `hexfetch --licenses`.
 
 ## License
 
-Code: MIT, see [LICENSE](LICENSE). The `nixos_average` logo: CC BY 4.0, see [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES).
+Project code: MIT, see [LICENSE](LICENSE). Third-party asset and dependency terms: [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES).
