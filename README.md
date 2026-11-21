@@ -4,7 +4,7 @@
 
 **A fast system information fetch for Linux, in a single static Go binary.**
 
-Smooth gradient logo · 62 modules · YAML configuration · x86, ARM, RISC-V and Termux
+Gradient hexos logo + 530 embedded distro logos · 62 modules · YAML configuration · x86, ARM, RISC-V and Termux
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Platform: Linux](https://img.shields.io/badge/platform-linux-informational)
@@ -24,7 +24,7 @@ Smooth gradient logo · 62 modules · YAML configuration · x86, ARM, RISC-V and
 - **One file.** A 7–8 MiB binary with no runtime dependencies. Linux builds are fully static (`CGO_ENABLED=0`).
 - **Six targets.** `linux-amd64`, `linux-arm64`, `linux-armv7`, `linux-386`, `linux-riscv64` and `android-arm64` (Termux).
 - **62 modules** that run concurrently: system, software, desktop, hardware, network and media.
-- **Gradient logo.** One embedded logo, six color bands, 12 configurable colors. Falls back to ANSI 256 colors automatically.
+- **Logos.** The default `hexos` logo has six gradient bands and 1, 2 or 12 configurable colors. 530+ distribution logos are embedded too (`--logo NAME`, `--logo auto`). Falls back to ANSI 256 colors automatically.
 - **Predictable configuration.** One YAML file; CLI flags override it; unknown or invalid settings produce a warning instead of a silent failure.
 - **Terminal-aware.** Output is clipped to the terminal width and the logo hides itself when there is no room.
 - **Tested without your hardware.** Module tests run against fixtures in `modules/testdata`.
@@ -73,7 +73,10 @@ CGO_ENABLED=0 go build -o hexfetch ./cmd/hexfetch
 hexfetch                                   # default layout
 hexfetch --gen-config                      # write $HOME/hex/set/hexfetch.yaml
 hexfetch -s "title:separator:os:kernel:uptime"
+hexfetch --logo arch                       # another embedded logo (see --list-logos)
+hexfetch --logo auto                       # logo of the running distribution
 hexfetch --logo-position right --padding 4
+hexfetch --list-logos
 hexfetch --list-modules --verbose          # every module with category and description
 ```
 
@@ -85,15 +88,17 @@ Boolean flags also accept `=true` or `=false`.
 | --- | --- | --- |
 | `-c, --config PATH` | `$HOME/hex/set/hexfetch.yaml` | Personal YAML config file. Also the destination for `--gen-config` and `--migrate-config` |
 | `-s, --structure LIST` | from config | Colon-separated modules to print. Selection and order only; module settings still come from YAML |
+| `-l, --logo NAME` | `hexos` | Logo name or alias, `auto` (from `/etc/os-release`) or `none` |
 | `-p, --logo-position SIDE` | `left` | Logo side: `left` or `right` |
 | `--padding N` | `2` | Spaces between the logo and the modules |
-| `--logo-colors LIST` | built-in | Exactly 12 comma-separated `38;2;R;G;B` values |
+| `--logo-colors LIST` | built-in | `hexos` only: 12, 2 or 1 comma-separated `38;2;R;G;B` values |
 | `--separator STR` | `" » "` | Separator between key and value |
 | `--key-type TYPE` | `string` | Key display: `string`, `icon` or `both` |
 | `--color-keys N` | `4` | ANSI 256-color index for module keys (0–255) |
 | `--no-color` | off | Disable all colors |
 | `--gen-config` | | Write the default YAML config. Never overwrites an existing file |
 | `--migrate-config` | | Convert the legacy TOML config to YAML ([details](#legacy-toml-migration)) |
+| `--list-logos` | | List embedded logos |
 | `--list-modules` | | List available modules |
 | `--verbose` | | With `--list-modules`: add categories and descriptions |
 | `--debug` | off | Show diagnostic details and skipped modules |
@@ -124,6 +129,12 @@ A Termux-style profile (Fastfetch-like icons, Python version via the `command` m
 # Personal settings go to $HOME/hex/set/hexfetch.yaml and are layered on top of this file.
 # Create that file with: hexfetch --gen-config
 hexfetch:
+  # Logo name, "auto" (pick from /etc/os-release) or "none". List names with: hexfetch --list-logos
+  logo: hexos
+  # Colors of the hexos logo only; other logos use their own flat colors.
+  # 12 colors: start and end color of each of the 6 gradient bands (the vanilla colors below).
+  # 2 colors: one start and one end color shared by all bands. 1 color: a flat logo.
+  # Remove the list to use the vanilla colors.
   logo_colors:
     - "38;2;133;104;242"
     - "38;2;206;177;240"
@@ -167,11 +178,12 @@ hexfetch:
 
 ### Schema
 
-Everything lives under the `hexfetch` key (the old `nixfetch` key is still accepted as a deprecated alias and produces a warning). There is no `logo` section.
+Everything lives under the `hexfetch` key (the old `nixfetch` key is still accepted as a deprecated alias and produces a warning). `logo` is a plain string, not a section.
 
 | Key | Type | Description |
 | --- | --- | --- |
-| `logo_colors` | list of 12 SGR strings | Logo gradient endpoints ([Logo and colors](#logo-and-colors)) |
+| `logo` | string | `hexos` (default), any logo name or alias, `auto` or `none` ([Logo and colors](#logo-and-colors)) |
+| `logo_colors` | list of 1, 2 or 12 SGR strings | `hexos` gradient colors ([Logo and colors](#logo-and-colors)) |
 | `display.separator` | string | Text between key and value |
 | `display.separator_char` | string | Character used by `separator` modules (default `-`) |
 | `display.color.keys` / `title` / `output` / `separator` | color | Colors of keys, title, values and separator lines |
@@ -292,19 +304,35 @@ The migration validates the converted settings and writes only supported, normal
 
 ## Logo and colors
 
-The binary contains exactly one logo. It does not depend on `/etc/os-release`, the working directory or any external file. Selecting another logo and loading logo files are not supported.
+All logos are embedded in the binary (`logo/ascii/<letter>/<name>.txt`); hexfetch reads no logo files from disk. The default is `hexos`. Choose another one with `logo:` in YAML or `--logo`:
 
-The logo has six gradient bands with fixed geometry and direction. Only their endpoint colors are configurable: `logo_colors` is a flat list of **12** values, and values `2n+1` and `2n+2` are the two endpoints of band `n` (bands 0–5).
+- `--list-logos` prints every name. Aliases such as `amzn` or `hex` resolve to their logo.
+- `auto` picks the logo from `/etc/os-release` (`ID`, `ID_LIKE`, `NAME`). If nothing matches, `hexos` is used.
+- `none` prints no logo.
+- An unknown name prints a warning and `hexos` is used.
+
+**hexos colors.** The `hexos` logo has six gradient bands with fixed geometry and direction. Only the endpoint colors are configurable through `logo_colors` (or `--logo-colors`):
+
+| Values | Meaning |
+| --- | --- |
+| none, or an empty list | The vanilla colors |
+| 12 | Start and end color of each band: values `2n+1` and `2n+2` belong to band `n` (bands 0–5) |
+| 2 | One start and one end color shared by all six bands |
+| 1 | One flat color for the whole logo |
 
 ```sh
-hexfetch --logo-colors "38;2;255;94;98,38;2;255;153;102,38;2;255;94;98,38;2;255;153;102,38;2;255;94;98,38;2;255;153;102,38;2;255;94;98,38;2;255;153;102,38;2;255;94;98,38;2;255;153;102,38;2;255;94;98,38;2;255;153;102"
+hexfetch --logo-colors "38;2;255;94;98,38;2;255;153;102"   # every band: coral to orange
+hexfetch --logo-colors "38;2;255;94;98"                     # flat coral
 ```
 
 - Each value must be `38;2;R;G;B` with channels 0–255.
-- A list of any other length is ignored and the built-in colors are used.
-- An invalid single value falls back to its own default; valid neighbors stay active.
-- `--logo-colors` takes exactly 12 values and overrides the YAML value one by one. An invalid item leaves the configured value unchanged.
+- Any other count (3–11, more than 12) is ignored with a warning and the vanilla colors are kept.
+- With 12 values an invalid item keeps its own default and valid neighbors stay active. With 1 or 2 values an invalid item rejects the whole list.
+- `--logo-colors` is applied on top of YAML. With 12 values an invalid item leaves the configured value unchanged.
+- Other logos use the flat colors from `logo/colors.txt` and ignore `logo_colors`.
 - Spaces are never colored, and every colored line ends with an ANSI reset.
+
+**Logo file format.** `$1`..`$9` switch to the corresponding color slot and `$$` prints a literal `$`. For classic logos each slot is one flat color from `logo/colors.txt` (`name=sgr:34,sgr:37` or `name=79;157;207`). For `hexos`, slot `n` is gradient band `n-1`.
 
 **Color depth.** hexfetch uses truecolor when `COLORTERM` is `truecolor` or `24bit`. Otherwise it also uses truecolor unless `TERM` is one of `linux`, `dumb`, `vt100`, `vt220`, `ansi` or `screen`, in which case the logo is converted to the nearest ANSI 256-color codes.
 
@@ -481,7 +509,8 @@ cmd/hexfetch/      entry point and main flow
 internal/cli/      flag parsing
 internal/config/   YAML loading, validation, TOML migration
 internal/gradient/ gradient math and color-depth detection
-internal/logo/     embedded logo and gradient renderer
+internal/logo/     logo catalog, parser and painters (classic and hexos)
+logo/              embedded logo art, colors.txt, aliases.txt
 internal/render/   layout, clipping, terminal width
 internal/diag/     diagnostics collector and printer
 modules/           one file per module, plus testdata/ fixtures
@@ -490,6 +519,10 @@ modules/           one file per module, plus testdata/ fixtures
 **Adding a module.** Create one file in `modules/` that registers the module in `init()` with `Register`, and add an entry to `modules/metadata.go` so that `--list-modules --verbose` shows its category and description.
 
 **Releases.** `release.py` builds the six targets (`-trimpath`, stripped, `CGO_ENABLED=0`), writes `SHA256SUMS`, fills `release_template.md` and uploads the assets with `gh`.
+
+## Credits
+
+The distribution logos are derived from the [fastfetch](https://github.com/fastfetch-cli/fastfetch) project (MIT License). See [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES). The `hexos` logo is original to hexfetch.
 
 ## License
 

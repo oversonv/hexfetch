@@ -136,18 +136,25 @@ func TestRenderUsesANSI256Fallback(t *testing.T) {
 	}
 }
 
-func TestEveryNonSpaceCellHasBand(t *testing.T) {
-	lines := strings.Split(logo, "\n")
-	if len(lines) != len(bands) {
-		t.Fatalf("logo has %d lines, bands have %d", len(lines), len(bands))
+func TestHexosMaskMatchesReferenceBands(t *testing.T) {
+	text, err := readArt("hexos")
+	if err != nil {
+		t.Fatal(err)
 	}
+	lines := strings.Split(text, "\n")
+	if len(lines) != len(referenceBands) {
+		t.Fatalf("hexos has %d lines, reference bands have %d", len(lines), len(referenceBands))
+	}
+	current := 0
 	for y, line := range lines {
-		for x, character := range []rune(line) {
-			if character == ' ' {
+		cells, _, next := parseCells(line, current)
+		current = next
+		for _, c := range cells {
+			if c.r == ' ' {
 				continue
 			}
-			if x >= len(bands[y]) || bands[y][x] < '0' || bands[y][x] > '5' {
-				t.Fatalf("logo cell (%d,%d) has no valid band", x, y)
+			if c.x >= len(referenceBands[y]) || int(referenceBands[y][c.x]-'0') != c.slot {
+				t.Fatalf("hexos cell (%d,%d) has slot %d, reference band %q", c.x, y, c.slot, referenceBands[y])
 			}
 		}
 	}

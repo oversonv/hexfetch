@@ -12,6 +12,7 @@ $EDITOR "$HOME/hex/set/hexfetch.yaml"   # paste the profile below
 
 ```yaml
 hexfetch:
+  logo: hexos
   display:
     separator: " » "
     separator_char: "─"

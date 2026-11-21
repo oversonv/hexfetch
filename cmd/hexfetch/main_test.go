@@ -11,6 +11,8 @@ import (
 	"hexfetch/internal/cli"
 	"hexfetch/internal/config"
 	"hexfetch/internal/diag"
+	"hexfetch/internal/gradient"
+	"hexfetch/internal/logo"
 	"hexfetch/internal/render"
 	"hexfetch/modules"
 )
@@ -299,5 +301,113 @@ func TestRunFormatWarningsUseDiagnosticsAndRespectQuiet(t *testing.T) {
 	})
 	if quietStderr != "" {
 		t.Fatalf("--quiet did not suppress format diagnostics: %q", quietStderr)
+	}
+}
+
+func logoText(l logo.Logo) string { return strings.Join(l.Lines, "\n") }
+
+func TestLoadLogoDefaultsToHexos(t *testing.T) {
+	var diagnostics diag.Collector
+	got := loadLogo(config.Default(), false, &diagnostics)
+	want := logo.Render(logo.DefaultColors(), false, gradient.TrueColor())
+	if logoText(got) != logoText(want) || len(diagnostics.All()) != 0 {
+		t.Fatalf("default logo is not hexos; diagnostics: %+v", diagnostics.All())
+	}
+}
+
+func TestLoadLogoResolvesNamesAndAliases(t *testing.T) {
+	hexos := logoText(loadLogo(config.Default(), false, &diag.Collector{}))
+	cfg := config.Default()
+	cfg.Logo = "arch"
+	if arch := logoText(loadLogo(cfg, false, &diag.Collector{})); arch == hexos || arch == "" {
+		t.Fatal("--logo arch did not select a different logo")
+	}
+	cfg.Logo = "HEX"
+	if got := logoText(loadLogo(cfg, false, &diag.Collector{})); got != hexos {
+		t.Fatal("alias hex did not resolve to hexos")
+	}
+}
+
+func TestLoadLogoUnknownNameFallsBackToHexosWithWarning(t *testing.T) {
+	var diagnostics diag.Collector
+	cfg := config.Default()
+	cfg.Logo = "definitely-not-a-distro"
+	got := loadLogo(cfg, false, &diagnostics)
+	if logoText(got) != logoText(logo.Render(logo.DefaultColors(), false, gradient.TrueColor())) {
+		t.Fatal("unknown logo did not fall back to hexos")
+	}
+	warned := false
+	for _, d := range diagnostics.All() {
+		warned = warned || d.Level == diag.Warning
+	}
+	if !warned {
+		t.Fatalf("no warning for an unknown logo: %+v", diagnostics.All())
+	}
+}
+
+func TestLoadLogoNoneAndAuto(t *testing.T) {
+	cfg := config.Default()
+	cfg.Logo = "none"
+	if got := loadLogo(cfg, false, &diag.Collector{}); len(got.Lines) != 0 {
+		t.Fatalf("none rendered a logo: %q", logoText(got))
+	}
+	cfg.Logo = "auto"
+	if got := loadLogo(cfg, false, &diag.Collector{}); len(got.Lines) == 0 {
+		t.Fatal("auto rendered no logo")
+	}
+}
+
+func TestLoadLogoCustomColorsAffectOnlyHexos(t *testing.T) {
+	cfg := config.Default()
+	for index := range cfg.LogoColors {
+		cfg.LogoColors[index] = gradient.RGB{R: 9, G: 8, B: 7}
+	}
+	hexos := logoText(loadLogo(cfg, true, &diag.Collector{}))
+	if !strings.Contains(hexos, "9;8;7") && !strings.Contains(hexos, "38;5;") {
+		t.Fatalf("hexos ignored custom colors: %q", hexos)
+	}
+	cfg.Logo = "arch"
+	custom := logoText(loadLogo(cfg, true, &diag.Collector{}))
+	plain := config.Default()
+	plain.Logo = "arch"
+	if custom != logoText(loadLogo(plain, true, &diag.Collector{})) {
+		t.Fatal("logo_colors changed a classic logo")
+	}
+}
+
+func TestApplyOverridesLogoName(t *testing.T) {
+	cfg := config.Default()
+	name := "arch"
+	applyOverrides(&cfg, cli.Options{Logo: &name}, &diag.Collector{})
+	if cfg.Logo != "arch" {
+		t.Fatalf("cfg.Logo = %q, want arch", cfg.Logo)
+	}
+}
+
+func TestRunListLogos(t *testing.T) {
+	output := captureStdout(t, func() {
+		if code := run([]string{"--list-logos"}); code != 0 {
+			t.Errorf("run(--list-logos) = %d, want 0", code)
+		}
+	})
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	if len(lines) < 500 || !strings.Contains("\n"+output, "\nhexos\n") {
+		t.Fatalf("--list-logos printed %d names, hexos present: %v", len(lines), strings.Contains(output, "hexos"))
+	}
+}
+
+func TestRunLogoNoneHidesLogo(t *testing.T) {
+	configPath := t.TempDir() + "/hexfetch.yaml"
+	if err := os.WriteFile(configPath, []byte("hexfetch:\n  logo: none\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	output := captureStdout(t, func() {
+		if code := run([]string{"--no-color", "--quiet", "--config", configPath, "--structure", "title"}); code != 0 {
+			t.Errorf("run() exit code = %d, want 0", code)
+		}
+	})
+	if strings.Contains(output, "▄") || strings.Contains(output, "▟") {
+		t.Fatalf("logo none still printed a logo: %q", output)
 	}
 }

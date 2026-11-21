@@ -585,7 +585,7 @@ func TestSpecsForWarnsWhenSeparatorHasNoTitle(t *testing.T) {
 	}
 }
 
-func TestLogoColorsRequireExactlyTwelveValues(t *testing.T) {
+func TestLogoColorsRejectCountsOtherThanOneTwoOrTwelve(t *testing.T) {
 	values := colorValues()[:11]
 	cfg, diagnostics := Load(writeYAML(t, yamlWithColors(values)))
 	if !reflect.DeepEqual(cfg.LogoColors, logo.DefaultColors()) {
@@ -1117,5 +1117,98 @@ func TestMigrationKeepsKeyTypeAndKeyIcon(t *testing.T) {
 	}
 	if got := loaded.Modules.Settings["os"].KeyIcon; got != "X" {
 		t.Fatalf("migrated KeyIcon = %q, want X", got)
+	}
+}
+
+func TestDefaultLogoIsHexos(t *testing.T) {
+	if got := Default().Logo; got != "hexos" {
+		t.Fatalf("Default().Logo = %q, want hexos", got)
+	}
+	if !strings.Contains(DefaultYAML, "\n  logo: hexos\n") {
+		t.Fatal("DefaultYAML does not select the hexos logo")
+	}
+}
+
+func TestLogoNameFromYAML(t *testing.T) {
+	cfg, diagnostics := Load(writeYAML(t, "hexfetch:\n  logo: arch\n"))
+	if cfg.Logo != "arch" || hasWarning(diagnostics, "hexfetch.logo") {
+		t.Fatalf("logo = %q, diagnostics = %+v", cfg.Logo, diagnostics)
+	}
+	cfg, diagnostics = Load(writeYAML(t, "hexfetch:\n  logo: 5\n"))
+	if cfg.Logo != "hexos" || !hasWarning(diagnostics, "hexfetch.logo") {
+		t.Fatalf("invalid logo changed the default: %q, diagnostics = %+v", cfg.Logo, diagnostics)
+	}
+}
+
+func TestLogoColorsTwoValuesApplyToEveryBand(t *testing.T) {
+	cfg, diagnostics := Load(writeYAML(t, yamlWithColors(colorValues()[:2])))
+	if hasWarning(diagnostics, "logo_colors") {
+		t.Fatalf("unexpected warning: %+v", diagnostics)
+	}
+	start, end := gradient.RGB{R: 1, G: 2, B: 3}, gradient.RGB{R: 4, G: 5, B: 6}
+	for index, color := range cfg.LogoColors {
+		want := start
+		if index%2 == 1 {
+			want = end
+		}
+		if color != want {
+			t.Fatalf("LogoColors[%d] = %+v, want %+v", index, color, want)
+		}
+	}
+}
+
+func TestLogoColorsOneValueIsFlat(t *testing.T) {
+	cfg, diagnostics := Load(writeYAML(t, yamlWithColors(colorValues()[:1])))
+	if hasWarning(diagnostics, "logo_colors") {
+		t.Fatalf("unexpected warning: %+v", diagnostics)
+	}
+	for index, color := range cfg.LogoColors {
+		if color != (gradient.RGB{R: 1, G: 2, B: 3}) {
+			t.Fatalf("LogoColors[%d] = %+v, want the single color", index, color)
+		}
+	}
+}
+
+func TestLogoColorsInvalidShortListKeepsVanillaColors(t *testing.T) {
+	cfg, diagnostics := Load(writeYAML(t, yamlWithColors([]string{"38;2;1;2;3", "red"})))
+	if !reflect.DeepEqual(cfg.LogoColors, logo.DefaultColors()) {
+		t.Fatalf("a partly invalid short list changed the colors: %+v", cfg.LogoColors)
+	}
+	if !hasWarning(diagnostics, "hexfetch.logo_colors[1]") {
+		t.Fatalf("missing per-color warning: %+v", diagnostics)
+	}
+}
+
+func TestLogoColorsEmptyListKeepsVanillaColors(t *testing.T) {
+	cfg, diagnostics := Load(writeYAML(t, "hexfetch:\n  logo_colors: []\n"))
+	if !reflect.DeepEqual(cfg.LogoColors, logo.DefaultColors()) || hasWarning(diagnostics, "logo_colors") {
+		t.Fatalf("empty list: colors = %+v, diagnostics = %+v", cfg.LogoColors, diagnostics)
+	}
+}
+
+func TestLogoColorsMissingKeepsVanillaColors(t *testing.T) {
+	cfg, _ := Load(writeYAML(t, "hexfetch:\n  logo: hexos\n"))
+	if !reflect.DeepEqual(cfg.LogoColors, logo.DefaultColors()) {
+		t.Fatalf("missing logo_colors changed the colors: %+v", cfg.LogoColors)
+	}
+}
+
+func TestOverrideLogoColorsAcceptsOneAndTwoValues(t *testing.T) {
+	base := logo.DefaultColors()
+	colors, diagnostics := OverrideLogoColors(base, colorValues()[:2])
+	if len(diagnostics) != 0 || colors[0] != (gradient.RGB{R: 1, G: 2, B: 3}) || colors[11] != (gradient.RGB{R: 4, G: 5, B: 6}) {
+		t.Fatalf("two-color override = %+v, %+v", colors, diagnostics)
+	}
+	colors, diagnostics = OverrideLogoColors(base, colorValues()[:1])
+	if len(diagnostics) != 0 || colors[7] != (gradient.RGB{R: 1, G: 2, B: 3}) {
+		t.Fatalf("one-color override = %+v, %+v", colors, diagnostics)
+	}
+	colors, diagnostics = OverrideLogoColors(base, colorValues()[:3])
+	if !reflect.DeepEqual(colors, base) || len(diagnostics) != 1 {
+		t.Fatalf("three colors must be rejected: %+v, %+v", colors, diagnostics)
+	}
+	colors, diagnostics = OverrideLogoColors(base, []string{"38;2;1;2;3", "nope"})
+	if !reflect.DeepEqual(colors, base) || len(diagnostics) != 1 {
+		t.Fatalf("invalid short list must keep the base colors: %+v, %+v", colors, diagnostics)
 	}
 }

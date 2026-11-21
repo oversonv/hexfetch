@@ -64,6 +64,7 @@ type ModulesConfig struct {
 }
 
 type Config struct {
+	Logo       string
 	LogoColors [12]gradient.RGB
 	Display    DisplayConfig
 	Modules    ModulesConfig
@@ -71,6 +72,7 @@ type Config struct {
 
 func Default() Config {
 	base := Config{
+		Logo:       logo.DefaultName,
 		LogoColors: logo.DefaultColors(),
 		Modules: ModulesConfig{
 			Settings: make(map[string]ModuleSpec),
@@ -203,13 +205,31 @@ func loadYAML(cfg Config, data []byte, configPath string) (Config, []diag.Diagno
 		addDiagnostic(&diagnostics, configPath, "hexfetch", "expected a YAML mapping")
 		return cfg, diagnostics
 	}
-	checkUnknown(&diagnostics, configPath, "hexfetch", hexfetch, "logo_colors", "display", "modules")
+	checkUnknown(&diagnostics, configPath, "hexfetch", hexfetch, "logo", "logo_colors", "display", "modules")
+	decodeLogo(hexfetch, &cfg, configPath, &diagnostics)
 	decodeLogoColors(hexfetch, &cfg, configPath, &diagnostics)
 	decodeDisplay(hexfetch, &cfg, configPath, &diagnostics)
 	decodeModules(hexfetch, &cfg, configPath, &diagnostics)
 	return cfg, diagnostics
 }
 
+func decodeLogo(section map[string]any, cfg *Config, source string, diagnostics *[]diag.Diagnostic) {
+	raw, exists := section["logo"]
+	if !exists {
+		return
+	}
+	name, ok := raw.(string)
+	if !ok || strings.TrimSpace(name) == "" {
+		addDiagnostic(diagnostics, source, "hexfetch.logo", "expected a logo name, \"auto\" or \"none\"")
+		return
+	}
+	cfg.Logo = strings.TrimSpace(name)
+}
+
+// decodeLogoColors reads hexfetch.logo_colors. The list has 12 colors (a start
+// and an end color for each of the six hexos bands), 2 colors (one start and
+// one end color shared by all bands) or 1 color (a flat logo). A missing or
+// empty list keeps the vanilla colors.
 func decodeLogoColors(section map[string]any, cfg *Config, source string, diagnostics *[]diag.Diagnostic) {
 	raw, exists := section["logo_colors"]
 	if !exists {
@@ -217,50 +237,90 @@ func decodeLogoColors(section map[string]any, cfg *Config, source string, diagno
 	}
 	items, ok := raw.([]any)
 	if !ok {
-		addDiagnostic(diagnostics, source, "hexfetch.logo_colors", "expected a sequence of exactly 12 38;2;R;G;B strings")
+		addDiagnostic(diagnostics, source, "hexfetch.logo_colors", "expected a sequence of 1, 2 or 12 38;2;R;G;B strings")
 		return
 	}
-	if len(items) != len(cfg.LogoColors) {
-		addDiagnostic(diagnostics, source, "hexfetch.logo_colors", fmt.Sprintf("expected exactly 12 colors, got %d", len(items)))
-		return
-	}
+	values := make([]string, len(items))
 	for index, item := range items {
-		value, ok := item.(string)
-		if !ok {
-			addDiagnostic(diagnostics, source, fmt.Sprintf("hexfetch.logo_colors[%d]", index), "expected a 38;2;R;G;B string")
-			continue
+		if value, ok := item.(string); ok {
+			values[index] = value
+		} else {
+			values[index] = fmt.Sprintf("%v", item)
 		}
-		color, err := gradient.ParseStop(value)
-		if err != nil {
-			addDiagnostic(diagnostics, source, fmt.Sprintf("hexfetch.logo_colors[%d]", index), err.Error())
-			continue
-		}
-		cfg.LogoColors[index] = color
 	}
+	colors, issues := expandLogoColors(cfg.LogoColors, values)
+	for _, issue := range issues {
+		field := "hexfetch.logo_colors"
+		if issue.index >= 0 {
+			field = fmt.Sprintf("hexfetch.logo_colors[%d]", issue.index)
+		}
+		addDiagnostic(diagnostics, source, field, issue.detail)
+	}
+	cfg.LogoColors = colors
 }
 
-func OverrideLogoColors(base [12]gradient.RGB, values []string) ([12]gradient.RGB, []diag.Diagnostic) {
-	if len(values) != len(base) {
-		return base, []diag.Diagnostic{{
-			Level:   diag.Warning,
-			Source:  "cli",
-			Message: fmt.Sprintf("Invalid --logo-colors value: expected exactly 12 colors, got %d; keeping the current colors.", len(values)),
-		}}
+type logoColorIssue struct {
+	index  int
+	detail string
+}
+
+// expandLogoColors turns a list of 1, 2 or 12 colors into the 12 band endpoint
+// colors. With 12 values an invalid item keeps the value from base. With 1 or 2
+// values any invalid item rejects the whole list and base is kept. An empty
+// list returns base. Any other count is rejected.
+func expandLogoColors(base [12]gradient.RGB, values []string) ([12]gradient.RGB, []logoColorIssue) {
+	switch len(values) {
+	case 0:
+		return base, nil
+	case 1, 2, 12:
+	default:
+		return base, []logoColorIssue{{index: -1, detail: fmt.Sprintf("expected 1, 2 or 12 colors, got %d", len(values))}}
 	}
-	result := base
-	var diagnostics []diag.Diagnostic
+	parsed := make([]gradient.RGB, len(values))
+	valid := make([]bool, len(values))
+	var issues []logoColorIssue
 	for index, value := range values {
 		color, err := gradient.ParseStop(value)
 		if err != nil {
-			diagnostics = append(diagnostics, diag.Diagnostic{
-				Level:   diag.Warning,
-				Source:  "cli",
-				Message: fmt.Sprintf("Invalid --logo-colors value at index %d; keeping the configured color.", index+1),
-				Detail:  err.Error(),
-			})
+			issues = append(issues, logoColorIssue{index: index, detail: err.Error()})
 			continue
 		}
-		result[index] = color
+		parsed[index], valid[index] = color, true
+	}
+	result := base
+	if len(values) == len(base) {
+		for index := range values {
+			if valid[index] {
+				result[index] = parsed[index]
+			}
+		}
+		return result, issues
+	}
+	if len(issues) > 0 {
+		return base, issues
+	}
+	for index := range result {
+		result[index] = parsed[index%len(parsed)]
+	}
+	return result, nil
+}
+
+// OverrideLogoColors applies --logo-colors (1, 2 or 12 colors) on top of base.
+func OverrideLogoColors(base [12]gradient.RGB, values []string) ([12]gradient.RGB, []diag.Diagnostic) {
+	result, issues := expandLogoColors(base, values)
+	var diagnostics []diag.Diagnostic
+	for _, issue := range issues {
+		diagnostic := diag.Diagnostic{Level: diag.Warning, Source: "cli", Detail: issue.detail}
+		switch {
+		case issue.index < 0:
+			diagnostic.Detail = ""
+			diagnostic.Message = fmt.Sprintf("Invalid --logo-colors value: %s; keeping the current colors.", issue.detail)
+		case len(values) == len(base):
+			diagnostic.Message = fmt.Sprintf("Invalid --logo-colors value at index %d; keeping the configured color.", issue.index+1)
+		default:
+			diagnostic.Message = fmt.Sprintf("Invalid --logo-colors value at index %d; keeping the current colors.", issue.index+1)
+		}
+		diagnostics = append(diagnostics, diagnostic)
 	}
 	return result, diagnostics
 }
@@ -907,6 +967,7 @@ func marshalResolvedConfig(cfg Config) ([]byte, error) {
 		moduleSettings[name] = fields
 	}
 	hexfetch := map[string]any{
+		"logo":        cfg.Logo,
 		"logo_colors": logoColors,
 		"display":     display,
 		"modules":     moduleSettings,

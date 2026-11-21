@@ -2,6 +2,12 @@
 # Personal settings go to $HOME/hex/set/hexfetch.yaml and are layered on top of this file.
 # Create that file with: hexfetch --gen-config
 hexfetch:
+  # Logo name, "auto" (pick from /etc/os-release) or "none". List names with: hexfetch --list-logos
+  logo: hexos
+  # Colors of the hexos logo only; other logos use their own flat colors.
+  # 12 colors: start and end color of each of the 6 gradient bands (the vanilla colors below).
+  # 2 colors: one start and one end color shared by all bands. 1 color: a flat logo.
+  # Remove the list to use the vanilla colors.
   logo_colors:
     - "38;2;133;104;242"
     - "38;2;206;177;240"

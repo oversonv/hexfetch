@@ -9,6 +9,7 @@ import (
 )
 
 type Options struct {
+	Logo          *string
 	LogoPosition  *string
 	Structure     *string
 	Config        *string
@@ -21,6 +22,7 @@ type Options struct {
 	GenConfig     bool
 	MigrateConfig bool
 	ListModules   bool
+	ListLogos     bool
 	Verbose       bool
 	Debug         bool
 	ShowErrors    bool
@@ -36,6 +38,7 @@ func Parse(args []string) (Options, error) {
 	set.Usage = func() {}
 
 	var o Options
+	logoName := set.StringP("logo", "l", "", "Logo name, auto or none (see --list-logos)")
 	position := set.StringP("logo-position", "p", "left", "Logo side: left or right")
 	structure := set.StringP("structure", "s", "", "Colon-separated list of modules to print")
 	configPath := set.StringP("config", "c", "", "Path to a YAML config file or --migrate-config destination")
@@ -43,11 +46,12 @@ func Parse(args []string) (Options, error) {
 	separator := set.String("separator", " » ", "Separator between key and value")
 	colorKeys := set.Int("color-keys", 4, "ANSI 256-color index for module keys (0-255)")
 	keyType := set.String("key-type", "string", "Key display: string, icon or both")
-	logoColors := set.String("logo-colors", "", "Comma-separated list of exactly 12 38;2;R;G;B colors")
+	logoColors := set.String("logo-colors", "", "Comma-separated 38;2;R;G;B colors for the hexos logo: 12 (start and end of 6 bands), 2 (start and end) or 1 (flat)")
 	set.BoolVar(&o.NoColor, "no-color", false, "Disable all colors")
 	set.BoolVar(&o.GenConfig, "gen-config", false, "Write the default config file")
 	set.BoolVar(&o.MigrateConfig, "migrate-config", false, "Convert the legacy TOML config to YAML without changing the original")
 	set.BoolVar(&o.ListModules, "list-modules", false, "List available modules")
+	set.BoolVar(&o.ListLogos, "list-logos", false, "List available logos")
 	set.BoolVar(&o.Verbose, "verbose", false, "Show module categories and descriptions with --list-modules")
 	set.BoolVar(&o.Debug, "debug", false, "Show diagnostic details and skipped modules")
 	set.BoolVar(&o.ShowErrors, "show-errors", false, "Show skipped modules and their reasons")
@@ -80,6 +84,9 @@ func Parse(args []string) (Options, error) {
 		return Options{}, fmt.Errorf("invalid key type %q: use string, icon or both", *keyType)
 	}
 
+	if set.Changed("logo") {
+		o.Logo = logoName
+	}
 	if set.Changed("logo-position") {
 		o.LogoPosition = position
 	}
@@ -116,6 +123,7 @@ func usage(set *pflag.FlagSet) string {
 	return "Usage: hexfetch [options]\n\nOptions:\n" + set.FlagUsages() + `
 Examples:
   hexfetch
+  hexfetch --logo-colors "38;2;255;94;98,38;2;255;153;102"
   hexfetch --logo-position right --padding 5
   hexfetch -s "title:os:kernel:uptime"
   hexfetch --structure "title:separator:os:shell:packages:break:colors"
@@ -123,6 +131,7 @@ Examples:
   hexfetch --key-type both
   hexfetch --migrate-config
   hexfetch --list-modules
+  hexfetch --list-logos
   hexfetch --list-modules --verbose
   hexfetch --debug -s "title:memory:cpu"
   hexfetch --quiet

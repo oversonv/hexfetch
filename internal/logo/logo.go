@@ -1,3 +1,12 @@
+// Package logo loads the embedded ASCII logos and paints them.
+//
+// Every logo is a text file in logo/ascii/<letter>/<name>.txt where "$1".."$9"
+// switch the active color slot and "$$" prints a literal "$". Two painters share
+// that format:
+//
+//   - classic logos use flat colors per slot taken from logo/colors.txt;
+//   - profile logos (currently only hexos) map each slot to a band with its own
+//     gradient geometry and two configurable endpoint colors.
 package logo
 
 import (
@@ -9,38 +18,17 @@ import (
 	"hexfetch/internal/gradient"
 )
 
-const logo = `       ▄▄▖     ▄▄▄  ▄▄▄
-       ▜██▖    ▀██▙▟██▘
-    ▄▄▄▄███▄▄▄▄▖▀████▘
-   ▟████████████▖▜██▙  ▗█▙
-       ▄▄▄▖       ▜██▌▗███
-      ▟██▛         ▜▛▗███▘
-▟███████▛           ▗███████▙
-▝▀▀▀███▛▗▖         ▗███▀▀▀▀▀▘
-   ▟██▛▗██▖       ▗███▘
-   ██▛ ▝███▖▗▄▄▄▄▄▄▄▄▄▄▄▄▖
-   ▝▀   ▟███ ▜██████████▛
-       ▟█████      ▜██▖
-      ▟██▘▝███      ▜██▖`
+// DefaultName is the logo used when nothing else is configured.
+const DefaultName = "hexos"
+
+type Logo struct {
+	Lines  []string
+	Widths []int
+	Width  int
+}
 
 const scaleX = 42.0 / 28.0
 const scaleY = 19.0 / 12.0
-
-var bands = [...]string{
-	"       000     111  111",
-	"       0000    11111111",
-	"    000000000000111111",
-	"   000000000000001111  222",
-	"       5555       11112222",
-	"      5555         1122222",
-	"555555555           222222222",
-	"5555555544         2222222222",
-	"   55554444       22222",
-	"   555 4444433333333333333",
-	"   55   4444 333333333333",
-	"       444444      3333",
-	"      44444444      3333",
-}
 
 type bandGradient struct {
 	dx float64
@@ -49,6 +37,8 @@ type bandGradient struct {
 	t1 float64
 }
 
+// gradients holds the geometry of the hexos bands. Band n is color slot n+1 in
+// logo/ascii/h/hexos.txt and uses colors[2n] (start) and colors[2n+1] (end).
 var gradients = [...]bandGradient{
 	{-0.816, -0.578, -25.36, -8.16},
 	{-0.781, -0.625, -35.76, -16.4},
@@ -58,10 +48,16 @@ var gradients = [...]bandGradient{
 	{-0.603, 0.798, 0.53, 20.91},
 }
 
-type Logo struct {
-	Lines  []string
-	Widths []int
-	Width  int
+// profiles lists the logos that are painted with band gradients.
+var profiles = map[string]struct{}{
+	DefaultName: {},
+}
+
+// HasProfile reports whether the logo is painted with the 12 configurable
+// gradient endpoint colors instead of the flat classic palette.
+func HasProfile(name string) bool {
+	_, ok := profiles[name]
+	return ok
 }
 
 func DefaultColors() [12]gradient.RGB {
@@ -81,42 +77,65 @@ func DefaultColors() [12]gradient.RGB {
 	}
 }
 
+// Render paints the hexos logo. It cannot fail: the logo is embedded.
 func Render(colors [12]gradient.RGB, color, trueColor bool) Logo {
-	lines := strings.Split(logo, "\n")
+	loaded, err := Load(DefaultName, colors, color, trueColor)
+	if err != nil {
+		return Logo{}
+	}
+	return loaded
+}
+
+// Load paints the named embedded logo. colors is used only by profile logos.
+func Load(name string, colors [12]gradient.RGB, color, trueColor bool) (Logo, error) {
+	text, err := readArt(name)
+	if err != nil {
+		return Logo{}, err
+	}
+	lines := strings.Split(text, "\n")
+	if HasProfile(name) {
+		return paintProfile(lines, colors, color, trueColor), nil
+	}
+	return paintClassic(lines, readPalette(name, trueColor), color), nil
+}
+
+func paintProfile(lines []string, colors [12]gradient.RGB, color, trueColor bool) Logo {
 	var loaded Logo
+	current := 0
 	for y, line := range lines {
+		cells, width, next := parseCells(line, current)
+		current = next
 		var output strings.Builder
-		for x, character := range []rune(line) {
-			if character == ' ' {
-				output.WriteRune(character)
+		for _, c := range cells {
+			if c.r == ' ' {
+				output.WriteRune(c.r)
 				continue
 			}
 			if color {
-				value := colorAt(x, y, colors)
+				value := colorAt(c.x, y, c.slot, colors)
 				output.WriteString("\x1b[")
 				output.WriteString(value.SGR(trueColor))
 				output.WriteByte('m')
 			}
-			output.WriteRune(character)
+			output.WriteRune(c.r)
 		}
 		if color {
 			output.WriteString("\x1b[0m")
 		}
 		loaded.Lines = append(loaded.Lines, output.String())
-		width := runewidth.StringWidth(line)
 		loaded.Widths = append(loaded.Widths, width)
 		loaded.Width = max(loaded.Width, width)
 	}
 	return loaded
 }
 
-func colorAt(x, y int, colors [12]gradient.RGB) gradient.RGB {
-	index := int(bands[y][x] - '0')
-	g := gradients[index]
+func colorAt(x, y, band int, colors [12]gradient.RGB) gradient.RGB {
+	band = min(max(band, 0), len(gradients)-1)
+	g := gradients[band]
 	px := float64(x) * scaleX
 	py := float64(y) * scaleY
 	t := (px*g.dx + py*2*g.dy - g.t0) / (g.t1 - g.t0)
-	return interpolate(index, t, colors)
+	return interpolate(band, t, colors)
 }
 
 func interpolate(index int, t float64, colors [12]gradient.RGB) gradient.RGB {
@@ -132,6 +151,39 @@ func interpolate(index int, t float64, colors [12]gradient.RGB) gradient.RGB {
 		G: uint8(math.RoundToEven(float64(from.G) + float64(int(to.G)-int(from.G))*t)),
 		B: uint8(math.RoundToEven(float64(from.B) + float64(int(to.B)-int(from.B))*t)),
 	}
+}
+
+type cell struct {
+	r    rune
+	slot int
+	x    int
+}
+
+// parseCells splits one art line into cells. current is the color slot that is
+// active at the start of the line; the slot active at its end is returned.
+func parseCells(line string, current int) ([]cell, int, int) {
+	var cells []cell
+	var plain strings.Builder
+	column := 0
+	runes := []rune(line)
+	for i := 0; i < len(runes); i++ {
+		r := runes[i]
+		switch {
+		case r == '$' && i+1 < len(runes) && runes[i+1] == '$':
+			cells = append(cells, cell{'$', current, column})
+			plain.WriteRune('$')
+			column++
+			i++
+		case r == '$' && i+1 < len(runes) && runes[i+1] >= '1' && runes[i+1] <= '9':
+			current = int(runes[i+1] - '1')
+			i++
+		default:
+			cells = append(cells, cell{r, current, column})
+			plain.WriteRune(r)
+			column += runewidth.RuneWidth(r)
+		}
+	}
+	return cells, runewidth.StringWidth(plain.String()), current
 }
 
 func StripANSI(value string) string {

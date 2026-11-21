@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -55,6 +56,11 @@ func run(args []string) int {
 			fmt.Println()
 		}
 		return 0
+	case opts.ListLogos:
+		for _, name := range logo.Names() {
+			fmt.Println(name)
+		}
+		return 0
 	case opts.GenConfig:
 		return generateConfig(opts)
 	case opts.MigrateConfig:
@@ -74,7 +80,7 @@ func run(args []string) int {
 
 	debug := opts.Debug || envEnabled("HEXFETCH_DEBUG") || envEnabled("NIXFETCH_DEBUG")
 	color := colorEnabled(opts.NoColor)
-	logoImage := logo.Render(cfg.LogoColors, color, gradient.TrueColor())
+	logoImage := loadLogo(cfg, color, diagnostics)
 	position := "left"
 	padding := 2
 	if opts.LogoPosition != nil {
@@ -143,6 +149,9 @@ func migrateConfig(opts cli.Options) int {
 }
 
 func applyOverrides(cfg *config.Config, opts cli.Options, diagnostics *diag.Collector) {
+	if opts.Logo != nil {
+		cfg.Logo = *opts.Logo
+	}
 	if opts.LogoColors != nil {
 		colors, colorDiagnostics := config.OverrideLogoColors(cfg.LogoColors, opts.LogoColors)
 		cfg.LogoColors = colors
@@ -159,6 +168,59 @@ func applyOverrides(cfg *config.Config, opts cli.Options, diagnostics *diag.Coll
 	if opts.ColorKeys != nil {
 		cfg.Display.Color.Keys = config.Palette(*opts.ColorKeys)
 	}
+}
+
+// loadLogo resolves cfg.Logo ("none", "auto", a name or an alias) and paints it.
+// Unknown names and failed detection fall back to the default logo, hexos.
+func loadLogo(cfg config.Config, color bool, diagnostics *diag.Collector) logo.Logo {
+	source := strings.TrimSpace(cfg.Logo)
+	if source == "" {
+		source = logo.DefaultName
+	}
+	if strings.EqualFold(source, "none") {
+		return logo.Logo{}
+	}
+	names := logo.Names()
+	aliases := logo.Aliases()
+	name := ""
+	if strings.EqualFold(source, "auto") {
+		release, err := modules.ReadOSRelease()
+		if err != nil && !errors.Is(err, errors.ErrUnsupported) {
+			diagnostics.Add(diag.Diagnostic{
+				Level:   diag.Warning,
+				Source:  "logo",
+				Message: "OS release information could not be read for logo selection.",
+				Detail:  err.Error(),
+			})
+		}
+		name = logo.Detect(names, aliases, release)
+		if name == "" {
+			diagnostics.Warnf("logo", "No suitable logo found for this system; using %s.", logo.DefaultName)
+		}
+	} else {
+		var found bool
+		name, found = logo.Resolve(names, aliases, source)
+		if !found {
+			diagnostics.Warnf("logo", "Logo %q not found (see --list-logos); using %s.", source, logo.DefaultName)
+		}
+	}
+	if name == "" {
+		name = logo.DefaultName
+	}
+	if !logo.HasProfile(name) && cfg.LogoColors != logo.DefaultColors() {
+		diagnostics.Infof("logo", "logo_colors only apply to the %s logo; %q uses its own colors.", logo.DefaultName, name)
+	}
+	loaded, err := logo.Load(name, cfg.LogoColors, color, gradient.TrueColor())
+	if err != nil {
+		diagnostics.Add(diag.Diagnostic{
+			Level:   diag.Warning,
+			Source:  "logo",
+			Message: fmt.Sprintf("Logo %q could not be loaded.", name),
+			Detail:  err.Error(),
+		})
+		return logo.Logo{}
+	}
+	return loaded
 }
 
 func colorEnabled(noColor bool) bool {

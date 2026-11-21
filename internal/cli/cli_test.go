@@ -37,12 +37,9 @@ func TestParseLogoColors(t *testing.T) {
 
 func TestRemovedLogoSelectionFlagsAreRejected(t *testing.T) {
 	for _, args := range [][]string{
-		{"--logo", "arch"},
-		{"-l", "arch"},
 		{"--logo-dir", "./logos"},
 		{"--logo-gradient", "38;2;1;2;3,38;2;4;5;6"},
 		{"--logo-direction", "diagonal"},
-		{"--list-logos"},
 	} {
 		if _, err := Parse(args); err == nil {
 			t.Errorf("Parse(%q) succeeded, want removed flag error", args)
@@ -84,7 +81,7 @@ func TestHelpUsesYAMLAndCurrentFlags(t *testing.T) {
 			t.Errorf("help output does not contain %q", value)
 		}
 	}
-	for _, value := range []string{"--logo-dir", "--logo-gradient", "--logo-direction", "--list-logos"} {
+	for _, value := range []string{"--logo-dir", "--logo-gradient", "--logo-direction"} {
 		if strings.Contains(options.Usage, value) {
 			t.Errorf("help output still contains removed flag %q", value)
 		}
@@ -120,5 +117,40 @@ func TestParseKeyType(t *testing.T) {
 	}
 	if _, err := Parse([]string{"--key-type", "wide"}); err == nil {
 		t.Fatal("invalid key type was accepted")
+	}
+}
+
+func TestParseLogoFlag(t *testing.T) {
+	for _, args := range [][]string{
+		{"--logo", "arch"},
+		{"--logo=arch"},
+		{"-l", "arch"},
+		{"-l=arch"},
+		{"-larch"},
+	} {
+		options, err := Parse(args)
+		if err != nil {
+			t.Errorf("Parse(%q) failed: %v", args, err)
+			continue
+		}
+		if options.Logo == nil || *options.Logo != "arch" {
+			t.Errorf("Parse(%q): Logo = %v, want arch", args, options.Logo)
+		}
+	}
+	if options, err := Parse(nil); err != nil || options.Logo != nil || options.ListLogos {
+		t.Fatalf("defaults changed: %+v, %v", options, err)
+	}
+}
+
+func TestParseListLogos(t *testing.T) {
+	options, err := Parse([]string{"--list-logos"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !options.ListLogos {
+		t.Fatal("--list-logos did not enable ListLogos")
+	}
+	if !strings.Contains(options.Usage, "--list-logos") {
+		t.Fatal("help output does not contain --list-logos")
 	}
 }
