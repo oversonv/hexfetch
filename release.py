@@ -11,13 +11,13 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 from pathlib import Path
-from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parent
 MAIN = ROOT / "cmd" / "hexfetch" / "main.go"
 TEMPLATE = ROOT / "release_template.md"
 OUT = Path.home() / "hexfetch" / "releases"
-HOST = "gitlab.com"
+HOST = "github.com"
+REPO = "oversonv/hexfetch"
 TAG = re.compile(r"v(\d+)\.(\d+)\.(\d+)")
 VERSION = re.compile(r'(?m)^(const version = ")(\d+\.\d+\.\d+)(")$')
 NOISE = re.compile(r"^(release:|Update \d{4}-\d{2}-\d{2})")
@@ -28,12 +28,6 @@ TARGETS = {
     "linux-386": ("linux", "386", "", 3),
     "linux-riscv64": ("linux", "riscv64", "", 243),
     "android-arm64": ("android", "arm64", "", 183),
-}
-GLAB_ENV = {
-    **os.environ,
-    "GITLAB_HOST": HOST,
-    "REMOTE_ALIAS": "origin",
-    "GITLAB_RELEASE_ASSETS_USE_PACKAGE_REGISTRY": "false",
 }
 
 
@@ -96,26 +90,29 @@ def bump(current, names):
 
 
 def preflight():
-    for tool in ("git", "go", "glab"):
+    for tool in ("git", "go", "gh"):
         if not shutil.which(tool):
             raise Fail(f"{tool} is not installed")
     remote = git("remote", "get-url", "origin")
     match = re.search(rf"{re.escape(HOST)}[:/](.+?)(?:\.git)?$", remote)
     if not match:
         raise Fail(f"origin must point to {HOST}: {remote}")
+    project = match.group(1)
+    if project != REPO:
+        raise Fail(f"origin must be {REPO}, got {project}")
     if git("status", "--porcelain", "--untracked-files=all"):
         raise Fail("working tree is not clean")
     branch = git("branch", "--show-current")
     if not branch or git("rev-parse", "--abbrev-ref", "@{upstream}") != f"origin/{branch}":
         raise Fail("the current branch must track origin/<branch>")
-    sh("glab", "auth", "status", "--hostname", HOST, env=GLAB_ENV)
+    sh("gh", "auth", "status")
     sh("git", "fetch", "--prune", "origin")
     ahead, behind = map(int, git("rev-list", "--left-right", "--count", "HEAD...@{upstream}").split())
     if behind:
         raise Fail(f"branch is {behind} commit(s) behind origin")
     if ahead and (ahead > 1 or "Release-Tag: " not in git("log", "-1", "--format=%B")):
         raise Fail("push local commits before releasing")
-    return branch, match.group(1)
+    return branch, project
 
 
 def remote_tags():
@@ -195,65 +192,53 @@ def tag_and_push(branch, tag, version):
     log(f"pushed {branch} and {tag}")
 
 
-class GitLab:
+class GitHub:
     def __init__(self, project):
         self.project = project
-        self.id = quote(project, safe="")
 
-    def call(self, path, *flags, check=True, binary=False):
-        return sh("glab", "api", f"projects/{self.id}/{path}", *flags, env=GLAB_ENV, check=check, binary=binary)
+    def release_exists(self, tag):
+        result = sh("gh", "release", "view", tag, "--repo", self.project, check=False)
+        return result.returncode == 0
 
-    def release(self, tag):
-        result = self.call(f"releases/{quote(tag, safe='')}", check=False)
-        if result.returncode == 0:
-            return json.loads(result.stdout)
-        if "404" in result.stdout + result.stderr:
-            return None
-        raise Fail(f"release lookup failed\n{result.stdout}{result.stderr}".strip())
-
-    def assets(self, tag):
-        links = json.loads(self.call(f"releases/{quote(tag, safe='')}/assets/links").stdout)
-        return {item["name"]: item["url"] for item in links}
+    def asset_names(self, tag):
+        result = sh("gh", "release", "view", tag, "--repo", self.project, "--json", "assets", check=False)
+        if result.returncode:
+            return set()
+        data = json.loads(result.stdout)
+        return {item["name"] for item in data.get("assets", [])}
 
     def create(self, tag, title, body):
-        if self.release(tag):
+        if self.release_exists(tag):
             log(f"release {tag} already exists")
             return
-        try:
-            self.call("releases", "--method", "POST", "--raw-field", f"tag_name={tag}", "--raw-field", f"name={title}", "--raw-field", f"description={body}")
-        except Fail:
-            if not self.release(tag):
-                raise
+        notes_file = OUT / tag / "RELEASE_NOTES.md"
+        sh(
+            "gh", "release", "create", tag,
+            "--repo", self.project,
+            "--title", title,
+            "--notes-file", str(notes_file),
+        )
         log(f"release {tag} created")
 
     def upload(self, tag, files):
+        existing = self.asset_names(tag)
         for path in files:
-            if path.name in self.assets(tag):
+            if path.name in existing:
                 log(f"{path.name}: already uploaded")
                 continue
-            result = sh("glab", "release", "upload", tag, path, "--repo", self.project, env=GLAB_ENV, check=False)
-            if path.name not in self.assets(tag):
-                raise Fail(f"upload failed: {path.name}\n{result.stdout}{result.stderr}".strip())
+            sh("gh", "release", "upload", tag, str(path), "--repo", self.project, "--clobber")
             log(f"{path.name}: uploaded")
 
     def verify(self, tag, files):
-        assets = self.assets(tag)
-
-        def check(path):
-            url = assets.get(path.name, "")
-            if "/uploads/" not in url:
-                raise Fail(f"missing upload link: {path.name}")
-            data = self.call(f"uploads/{url.split('/uploads/', 1)[1]}", binary=True).stdout
-            if hashlib.sha256(data).hexdigest() != sha256(path):
-                raise Fail(f"checksum mismatch: {path.name}")
-
-        with ThreadPoolExecutor(max_workers=len(files)) as pool:
-            list(pool.map(check, files))
+        existing = self.asset_names(tag)
+        missing = [path.name for path in files if path.name not in existing]
+        if missing:
+            raise Fail(f"missing assets on release: {', '.join(missing)}")
         log(f"verified {len(files)} remote assets")
 
 
 def parse():
-    parser = argparse.ArgumentParser(description="Build every target and publish a hexfetch release to GitLab.")
+    parser = argparse.ArgumentParser(description="Build every target and publish a hexfetch release to GitHub.")
     parser.add_argument("summary", nargs="?", help="short description of what changed, inserted into the release notes")
     parser.add_argument("--version", help="X.Y.Z, default: next patch version")
     parser.add_argument("--targets", default="all", help="comma-separated targets, default: all")
@@ -295,7 +280,10 @@ def main():
             write_version(version)
         binaries = build_all(names, version, stage, args.workers)
         (stage / "SHA256SUMS").write_text("".join(f"{sha256(path)}  {path.name}\n" for path in binaries))
-        compare = f"[{previous}...{tag}](https://{HOST}/{project}/-/compare/{previous}...{tag})" if previous else f"[{tag}](https://{HOST}/{project}/-/commits/{tag})"
+        if previous:
+            compare = f"[{previous}...{tag}](https://github.com/{project}/compare/{previous}...{tag})"
+        else:
+            compare = f"[{tag}](https://github.com/{project}/commits/{tag})"
         body = render({
             "version": version,
             "tag": tag,
@@ -317,11 +305,11 @@ def main():
             commit(version, tag)
             committed = True
         tag_and_push(branch, tag, version)
-        gitlab = GitLab(project)
-        gitlab.create(tag, f"Hexfetch {version}", body)
-        gitlab.upload(tag, assets)
-        gitlab.verify(tag, assets)
-        log(f"done: https://{HOST}/{project}/-/releases/{tag}")
+        github = GitHub(project)
+        github.create(tag, f"Hexfetch {version}", body)
+        github.upload(tag, assets)
+        github.verify(tag, assets)
+        log(f"done: https://github.com/{project}/releases/tag/{tag}")
     finally:
         shutil.rmtree(stage, ignore_errors=True)
         if changed and not committed:
@@ -336,4 +324,3 @@ if __name__ == "__main__":
         sys.exit(1)
     except KeyboardInterrupt:
         sys.exit(130)
-
