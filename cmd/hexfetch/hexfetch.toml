@@ -2,7 +2,7 @@
 # release.py reads and updates [package].version; keep the line format intact.
 [package]
 name = "hexfetch"
-version = "0.5.12"
+version = "0.6.0"
 description = "A fast system information fetch for Linux, in a single static Go binary."
 repository = "https://github.com/oversonv/hexfetch"
 license = "MIT"
