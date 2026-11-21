@@ -84,7 +84,6 @@ func buildLines(entries []modules.Entry, o Options, avail int) ([]string, []int)
 		widths = append(widths, width)
 	}
 	titleWidth := 0
-	keyColumnWidth := 0
 	contentWidth := 0
 	for _, entry := range entries {
 		switch entry.Kind {
@@ -92,8 +91,6 @@ func buildLines(entries []modules.Entry, o Options, avail int) ([]string, []int)
 			if titleWidth == 0 {
 				titleWidth = logo.VisibleWidth(entry.Value)
 			}
-		case modules.KindNormal:
-			keyColumnWidth = max(keyColumnWidth, logo.VisibleWidth(keyLabel(entry, o.KeyType)))
 		case modules.KindRaw:
 			contentWidth = max(contentWidth, logo.VisibleWidth(entry.Value))
 		case modules.KindPalette:
@@ -107,7 +104,7 @@ func buildLines(entries []modules.Entry, o Options, avail int) ([]string, []int)
 	}
 	for _, entry := range entries {
 		if entry.Kind == modules.KindNormal {
-			width := keyColumnWidth + logo.VisibleWidth(o.Separator) + logo.VisibleWidth(entry.Value)
+			width := logo.VisibleWidth(keyLabel(entry, o.KeyType)) + logo.VisibleWidth(o.Separator) + logo.VisibleWidth(entry.Value)
 			contentWidth = max(contentWidth, width)
 		}
 	}
@@ -146,12 +143,10 @@ func buildLines(entries []modules.Entry, o Options, avail int) ([]string, []int)
 				color = *entry.KeyColor
 			}
 			label := keyLabel(entry, o.KeyType)
-			labelWidth := logo.VisibleWidth(label)
-			labelPadding := strings.Repeat(" ", max(keyColumnWidth-labelWidth, 0))
-			text := paint(label, color, o.Color) + labelPadding +
+			text := paint(label, color, o.Color) +
 				paint(o.Separator, o.SeparatorColor, o.Color) +
 				paint(entry.Value, o.OutputColor, o.Color)
-			add(text, keyColumnWidth+logo.VisibleWidth(o.Separator)+logo.VisibleWidth(entry.Value))
+			add(text, logo.VisibleWidth(label)+logo.VisibleWidth(o.Separator)+logo.VisibleWidth(entry.Value))
 		}
 	}
 	return lines, widths

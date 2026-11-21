@@ -1,39 +1,41 @@
+# hexfetch default configuration (embedded into the binary).
+# Personal settings go to $HOME/hex/hexfetch.yaml and are layered on top of this file.
+# Create that file with: hexfetch --gen-config
 hexfetch:
+  logo_colors:
+    - "38;2;133;104;242"
+    - "38;2;206;177;240"
+    - "38;2;107;106;255"
+    - "38;2;79;185;254"
+    - "38;2;206;177;240"
+    - "38;2;133;104;242"
+    - "38;2;79;185;254"
+    - "38;2;107;106;255"
+    - "38;2;206;177;240"
+    - "38;2;133;104;242"
+    - "38;2;107;106;255"
+    - "38;2;79;185;254"
   display:
     separator: " » "
-    separator_char: "─"
-    separator_length: 18
-    key:
-      type: both
+    separator_char: "-"
     color:
-      keys: "38;2;255;255;255"
+      keys: "1;38;2;150;150;150"
       title: "38;2;255;255;255"
       output: "38;2;255;255;255"
-      separator: "38;2;190;190;190"
+      separator: "38;2;130;140;138"
   modules:
     items:
       - title
       - separator
-      - os
-      - packages
       - shell
-      - command
       - terminal
+      - terminalfont
+      - wm
+      - de
+      - theme
+      - icons
+      - cursor
+      - packages
+      - uptime
     title:
-      text: "You again?"
-    os:
-      key: "OS"
-      key_icon: "\uf313"
-    packages:
-      key: "Packages"
-      key_icon: "\uf487"
-    shell:
-      key: "Shell"
-      key_icon: "\uf489"
-    command:
-      key: "Python"
-      key_icon: "\ue73c"
-      text: "python -V 2>&1 | cut -d' ' -f2"
-    terminal:
-      key: "Terminal"
-      key_icon: "\uf489"
+      format: "Welcome!"

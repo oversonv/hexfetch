@@ -138,7 +138,46 @@ func TestLoadYAMLDisplayModulesAndColors(t *testing.T) {
 }
 
 func TestTermuxFastfetchProfileLoadsWithoutWarnings(t *testing.T) {
-	profilePath := filepath.Join("..", "..", "hex", "hexfetch.yaml")
+	profilePath := writeYAML(t, `hexfetch:
+  display:
+    separator: " » "
+    separator_char: "─"
+    separator_length: 18
+    key:
+      type: both
+    color:
+      keys: "38;2;255;255;255"
+      title: "38;2;255;255;255"
+      output: "38;2;255;255;255"
+      separator: "38;2;190;190;190"
+  modules:
+    items:
+      - title
+      - separator
+      - os
+      - packages
+      - shell
+      - command
+      - terminal
+    title:
+      text: "You again?"
+    os:
+      key: "OS"
+      key_icon: "\uf313"
+    packages:
+      key: "Packages"
+      key_icon: "\uf487"
+    shell:
+      key: "Shell"
+      key_icon: "\uf489"
+    command:
+      key: "Python"
+      key_icon: "\ue73c"
+      text: "python -V 2>&1 | cut -d' ' -f2"
+    terminal:
+      key: "Terminal"
+      key_icon: "\uf489"
+`)
 	cfg, diagnostics := Load(profilePath)
 	for _, diagnostic := range diagnostics {
 		if diagnostic.Level >= diag.Warning {

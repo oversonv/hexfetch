@@ -158,31 +158,117 @@ func TestSeparatorUsesPaletteWidth(t *testing.T) {
 	}
 }
 
-func TestValuesAlignAfterVariableWidthIconsAndKeys(t *testing.T) {
+func TestLabelsAreNotAlignedAcrossModules(t *testing.T) {
 	entries := []modules.Entry{
-		{Kind: modules.KindNormal, Key: "OS", KeyIcon: "界", Value: "Linux"},
-		{Kind: modules.KindNormal, Key: "Packages", KeyIcon: "\uf1b2", Value: "119"},
-		{Kind: modules.KindNormal, Key: "Shell", KeyIcon: "\uf199", Value: "zsh"},
+		{Kind: modules.KindNormal, Key: "OS", Value: "Linux aarch64"},
+		{Kind: modules.KindNormal, Key: "Packages", Value: "119 (dpkg)"},
+		{Kind: modules.KindNormal, Key: "Shell", Value: "zsh 5.9.2"},
+		{Kind: modules.KindNormal, Key: "Python", Value: "3.14.10"},
+		{Kind: modules.KindNormal, Key: "Terminal", Value: "Termux"},
 	}
-	lines, widths := buildLines(entries, Options{Separator: " » ", KeyType: "both"}, 0)
-	if len(lines) != len(entries) {
-		t.Fatalf("buildLines() returned %d lines, want %d", len(lines), len(entries))
+	want := []string{
+		"OS » Linux aarch64",
+		"Packages » 119 (dpkg)",
+		"Shell » zsh 5.9.2",
+		"Python » 3.14.10",
+		"Terminal » Termux",
 	}
-	var expectedColumn int
-	for index, line := range lines {
-		label, _, found := strings.Cut(line, " » ")
-		if !found {
-			t.Fatalf("line %d has no separator: %q", index, line)
+	lines, widths := buildLines(entries, Options{Separator: " » "}, 0)
+	if len(lines) != len(want) {
+		t.Fatalf("got %d lines, want %d", len(lines), len(want))
+	}
+	for i := range want {
+		if lines[i] != want[i] {
+			t.Fatalf("line %d = %q, want %q", i, lines[i], want[i])
 		}
-		column := logo.VisibleWidth(label)
-		if index == 0 {
-			expectedColumn = column
-		} else if column != expectedColumn {
-			t.Fatalf("line %d separator starts at visible column %d, want %d: %q", index, column, expectedColumn, line)
+		if widths[i] != logo.VisibleWidth(want[i]) {
+			t.Fatalf("line %d width = %d, want %d", i, widths[i], logo.VisibleWidth(want[i]))
 		}
-		if widths[index] != expectedColumn+logo.VisibleWidth(" » ")+logo.VisibleWidth(entries[index].Value) {
-			t.Fatalf("line %d width = %d, want calculated visible width", index, widths[index])
+	}
+}
+
+func TestSeparatorIsPreservedExactly(t *testing.T) {
+	entry := []modules.Entry{{Kind: modules.KindNormal, Key: "OS", Value: "Linux"}}
+	for _, sep := range []string{"", ":", ": ", " » ", "  →  ", "界"} {
+		lines, widths := buildLines(entry, Options{Separator: sep}, 0)
+		if want := "OS" + sep + "Linux"; lines[0] != want || widths[0] != logo.VisibleWidth(want) {
+			t.Fatalf("separator %q: line %q width %d, want %q", sep, lines[0], widths[0], want)
 		}
+	}
+}
+
+func TestIconsMissingCustomAndUnicode(t *testing.T) {
+	entries := []modules.Entry{
+		{Kind: modules.KindNormal, Key: "OS", KeyIcon: "\uf313", Value: "NixOS"},
+		{Kind: modules.KindNormal, Key: "Shell", Value: "zsh"},
+		{Kind: modules.KindNormal, Key: "ОС", KeyIcon: "界", Value: "x"},
+	}
+	tests := []struct {
+		keyType string
+		want    []string
+	}{
+		{"", []string{"OS » NixOS", "Shell » zsh", "ОС » x"}},
+		{"string", []string{"OS » NixOS", "Shell » zsh", "ОС » x"}},
+		{"both", []string{"\uf313 OS » NixOS", "Shell » zsh", "界 ОС » x"}},
+		{"icon", []string{"\uf313 » NixOS", "Shell » zsh", "界 » x"}},
+	}
+	for _, test := range tests {
+		lines, _ := buildLines(entries, Options{Separator: " » ", KeyType: test.keyType}, 0)
+		for i := range test.want {
+			if lines[i] != test.want[i] {
+				t.Fatalf("key type %q line %d = %q, want %q", test.keyType, i, lines[i], test.want[i])
+			}
+		}
+	}
+}
+
+func TestWidthIgnoresANSIAndCountsDisplayColumns(t *testing.T) {
+	entries := []modules.Entry{{Kind: modules.KindNormal, Key: "界界", Value: "é"}}
+	lines, widths := buildLines(entries, Options{
+		Separator: ": ", KeyColor: "1;31", SeparatorColor: "2", OutputColor: "32", Color: true,
+	}, 0)
+	want := "\x1b[1;31m界界\x1b[0m\x1b[2m: \x1b[0m\x1b[32mé\x1b[0m"
+	if lines[0] != want {
+		t.Fatalf("line = %q, want %q", lines[0], want)
+	}
+	// 界界 = 2 code points, 6 bytes, 4 columns; ": " = 2; é = 1.
+	if widths[0] != 7 || logo.VisibleWidth(lines[0]) != 7 {
+		t.Fatalf("width = %d, visible = %d, want 7", widths[0], logo.VisibleWidth(lines[0]))
+	}
+}
+
+func TestLongLabelDoesNotAffectOtherLines(t *testing.T) {
+	long := strings.Repeat("L", 60)
+	entries := []modules.Entry{
+		{Kind: modules.KindNormal, Key: long, Value: "v"},
+		{Kind: modules.KindNormal, Key: "OS", Value: "Linux"},
+	}
+	lines, _ := buildLines(entries, Options{Separator: " » "}, 0)
+	if lines[0] != long+" » v" || lines[1] != "OS » Linux" {
+		t.Fatalf("lines = %q", lines)
+	}
+}
+
+func TestMultilineAndLogoSpacingUnchanged(t *testing.T) {
+	entries := []modules.Entry{
+		{Kind: modules.KindNormal, Key: "OS", Value: "Linux"},
+		{Kind: modules.KindNormal, Key: "Packages", Value: "119"},
+		{Kind: modules.KindBreak},
+		{Kind: modules.KindNormal, Key: "Shell", Value: "zsh"},
+	}
+	var buf bytes.Buffer
+	err := Render(&buf, entries, Options{Logo: fakeLogo(4), Position: "left", Padding: 2, Separator: " » "})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "####  OS » Linux\n" +
+		"####  Packages » 119\n" +
+		"####\n" +
+		"####  Shell » zsh\n" +
+		"####\n" +
+		"####\n"
+	if buf.String() != want {
+		t.Fatalf("output = %q, want %q", buf.String(), want)
 	}
 }
 
@@ -198,30 +284,5 @@ func TestSeparatorLengthOverridesTitleWidth(t *testing.T) {
 	lines, widths = buildLines(entries, Options{}, 0)
 	if widths[1] != 3 || logo.VisibleWidth(lines[1]) != 3 {
 		t.Fatalf("automatic separator = %q with widths %v, want title width 3", lines, widths)
-	}
-}
-
-func TestKeyTypeSelectsIconAndKeyLabel(t *testing.T) {
-	entries := []modules.Entry{
-		{Kind: modules.KindNormal, Key: "OS", KeyIcon: "\uf313", Value: "NixOS"},
-		{Kind: modules.KindNormal, Key: "Shell", Value: "zsh"},
-	}
-	tests := []struct {
-		keyType string
-		want    []string
-	}{
-		{keyType: "", want: []string{"OS    » NixOS", "Shell » zsh"}},
-		{keyType: "string", want: []string{"OS    » NixOS", "Shell » zsh"}},
-		{keyType: "both", want: []string{"\uf313 OS  » NixOS", "Shell » zsh"}},
-		{keyType: "icon", want: []string{"\uf313     » NixOS", "Shell » zsh"}},
-	}
-	for _, test := range tests {
-		lines, widths := buildLines(entries, Options{Separator: " » ", KeyType: test.keyType}, 0)
-		if len(lines) != 2 || lines[0] != test.want[0] || lines[1] != test.want[1] {
-			t.Fatalf("key type %q: lines = %q, want %q", test.keyType, lines, test.want)
-		}
-		if widths[1] != 11 {
-			t.Fatalf("key type %q: widths = %v", test.keyType, widths)
-		}
 	}
 }
