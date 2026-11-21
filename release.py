@@ -2,24 +2,27 @@ import argparse
 import hashlib
 import json
 import os
+import platform
 import re
 import shutil
 import struct
 import subprocess
 import sys
 import time
+import tomllib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-MAIN = ROOT / "cmd" / "hexfetch" / "main.go"
+META = ROOT / "cmd" / "hexfetch" / "hexfetch.toml"
 TEMPLATE = ROOT / "release_template.md"
 OUT = Path.home() / "hexfetch" / "releases"
 HOST = "github.com"
 REPO = "oversonv/hexfetch"
 TAG = re.compile(r"v(\d+)\.(\d+)\.(\d+)")
-VERSION = re.compile(r'(?m)^(const version = ")(\d+\.\d+\.\d+)(")$')
+VERSION = re.compile(r'(?m)^(version = ")(\d+\.\d+\.\d+)(")([ \t]*#.*)?\r?$')
+SEMVER = re.compile(r"\d+\.\d+\.\d+")
 NOISE = re.compile(r"^(release:|Update \d{4}-\d{2}-\d{2})")
 TARGETS = {
     "linux-amd64": ("linux", "amd64", "", 62),
@@ -70,14 +73,24 @@ def latest(names, exclude=None):
 
 
 def read_version():
-    match = VERSION.search(MAIN.read_text())
-    if not match:
-        raise Fail(f"no 'const version' declaration in {MAIN}")
-    return match.group(2)
+    try:
+        version = tomllib.loads(META.read_text(encoding="utf-8"))["package"]["version"]
+    except (OSError, tomllib.TOMLDecodeError, KeyError, TypeError) as error:
+        raise Fail(f"cannot read [package].version from {META}: {error}") from error
+    if not isinstance(version, str) or not SEMVER.fullmatch(version):
+        raise Fail(f"{META}: version must look like X.Y.Z, got {version!r}")
+    return version
 
 
 def write_version(version):
-    MAIN.write_text(VERSION.sub(rf"\g<1>{version}\g<3>", MAIN.read_text()))
+    original = META.read_text(encoding="utf-8")
+    updated, count = VERSION.subn(rf"\g<1>{version}\g<3>\g<4>", original, count=1)
+    if count != 1:
+        raise Fail(f"no 'version = \"X.Y.Z\"' line in {META}")
+    META.write_text(updated, encoding="utf-8")
+    if read_version() != version:
+        META.write_text(original, encoding="utf-8")
+        raise Fail(f"{META}: version was not updated to {version}")
 
 
 def bump(current, names):
@@ -157,6 +170,25 @@ def build_all(names, version, dest, workers):
     return [paths[name] for name in names]
 
 
+def verify_binaries(paths, version):
+    needle = f'version = "{version}"'.encode()
+    host = {"x86_64": "amd64", "amd64": "amd64", "aarch64": "arm64", "arm64": "arm64"}.get(platform.machine().lower())
+    for path in paths:
+        if needle not in path.read_bytes():
+            raise Fail(f"{path.name}: embedded hexfetch.toml does not contain {needle.decode()}")
+        target = path.name.removeprefix(f"hexfetch_{version}_")
+        if target not in TARGETS or TARGETS[target][1] != host:
+            continue
+        try:
+            result = subprocess.run([str(path), "--version"], capture_output=True, text=True, timeout=20)
+        except OSError:
+            log(f"{path.name}: cannot be executed on this host, embedded version checked only")
+            continue
+        if result.stdout.strip() != f"hexfetch {version}":
+            raise Fail(f"{path.name}: --version printed {result.stdout.strip()!r}, want 'hexfetch {version}'")
+        log(f"{path.name}: --version ok")
+
+
 def changes(previous):
     span = ["log", f"{previous}..HEAD"] if previous else ["log", "-20"]
     lines = git(*span, "--format=%s").splitlines()
@@ -176,7 +208,7 @@ def table(files):
 
 
 def commit(version, tag):
-    sh("git", "add", "--", MAIN.relative_to(ROOT))
+    sh("git", "add", "--", META.relative_to(ROOT))
     sh("git", "commit", "-m", f"release: {tag}\n\nRelease-Version: {version}\nRelease-Tag: {tag}")
 
 
@@ -279,6 +311,7 @@ def main():
         if changed:
             write_version(version)
         binaries = build_all(names, version, stage, args.workers)
+        verify_binaries(binaries, version)
         (stage / "SHA256SUMS").write_text("".join(f"{sha256(path)}  {path.name}\n" for path in binaries))
         if previous:
             compare = f"[{previous}...{tag}](https://github.com/{project}/compare/{previous}...{tag})"
@@ -313,7 +346,7 @@ def main():
     finally:
         shutil.rmtree(stage, ignore_errors=True)
         if changed and not committed:
-            sh("git", "checkout", "--", MAIN.relative_to(ROOT), check=False)
+            sh("git", "checkout", "--", META.relative_to(ROOT), check=False)
 
 
 if __name__ == "__main__":

@@ -52,3 +52,4 @@ go.work.sum
 # Personal configs must never be committed
 /config.yaml
 /hexfetch.yaml
+__pycache__/

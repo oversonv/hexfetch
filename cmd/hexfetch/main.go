@@ -14,8 +14,6 @@ import (
 	"hexfetch/modules"
 )
 
-const version = "0.5.9"
-
 func main() {
 	os.Exit(run(os.Args[1:]))
 }
@@ -31,7 +29,7 @@ func run(args []string) int {
 		fmt.Print(opts.Usage)
 		return 0
 	case opts.Version:
-		fmt.Println("hexfetch " + version)
+		fmt.Println("hexfetch " + appVersion())
 		return 0
 	case opts.ListModules:
 		for _, name := range modules.Names() {
