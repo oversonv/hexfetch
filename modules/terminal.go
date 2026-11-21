@@ -17,7 +17,7 @@ func (terminal) Run(ctx Context) ([]Entry, error) {
 		return Single(ctx, "Terminal", name), nil
 	}
 	if name := os.Getenv("TERM_PROGRAM"); name != "" {
-		return Single(ctx, "Terminal", name), nil
+		return Single(ctx, "Terminal", prettyTerminalName(name)), nil
 	}
 	hints := []struct{ variable, name string }{
 		{"KITTY_WINDOW_ID", "kitty"},
@@ -78,10 +78,13 @@ func isWrapperProcess(name string) bool {
 }
 
 func prettyTerminalName(comm string) string {
+	normalized := strings.ToLower(strings.TrimSpace(comm))
 	switch {
-	case strings.HasPrefix(comm, "gnome-terminal"):
+	case normalized == "com.termux", normalized == "termux":
+		return "Termux"
+	case strings.HasPrefix(normalized, "gnome-terminal"):
 		return "gnome-terminal"
-	case comm == "wezterm-gui":
+	case normalized == "wezterm-gui":
 		return "wezterm"
 	}
 	return comm

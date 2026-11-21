@@ -39,10 +39,11 @@ type ColorConfig struct {
 }
 
 type DisplayConfig struct {
-	Separator     string
-	SeparatorChar string
-	KeyType       string
-	Color         ColorConfig
+	Separator       string
+	SeparatorChar   string
+	SeparatorLength int
+	KeyType         string
+	Color           ColorConfig
 }
 
 type ModuleSpec struct {
@@ -273,9 +274,17 @@ func decodeDisplay(section map[string]any, cfg *Config, source string, diagnosti
 		addDiagnostic(diagnostics, source, "hexfetch.display", "expected a YAML mapping")
 		return
 	}
-	checkUnknown(diagnostics, source, "hexfetch.display", fields, "separator", "separator_char", "key", "color")
+	checkUnknown(diagnostics, source, "hexfetch.display", fields, "separator", "separator_char", "separator_length", "key", "color")
 	decodeString(fields, "separator", "hexfetch.display.separator", &cfg.Display.Separator, source, diagnostics)
 	decodeString(fields, "separator_char", "hexfetch.display.separator_char", &cfg.Display.SeparatorChar, source, diagnostics)
+	if rawLength, present := fields["separator_length"]; present {
+		length, valid := configInteger(rawLength)
+		if !valid || length < 0 || length > 4096 {
+			addDiagnostic(diagnostics, source, "hexfetch.display.separator_length", "expected an integer from 0 to 4096 (0 means automatic width)")
+		} else {
+			cfg.Display.SeparatorLength = length
+		}
+	}
 	if rawKey, present := fields["key"]; present {
 		keyFields, valid := asStringMap(rawKey)
 		if !valid {
@@ -825,6 +834,9 @@ func marshalResolvedConfig(cfg Config) ([]byte, error) {
 			"output":    string(cfg.Display.Color.Output),
 			"separator": string(cfg.Display.Color.Separator),
 		},
+	}
+	if cfg.Display.SeparatorLength > 0 {
+		display["separator_length"] = cfg.Display.SeparatorLength
 	}
 	if cfg.Display.KeyType != "" {
 		display["key"] = map[string]any{"type": cfg.Display.KeyType}

@@ -10,17 +10,18 @@ import (
 )
 
 type Options struct {
-	Logo           logo.Logo
-	Position       string
-	Padding        int
-	Separator      string
-	KeyType        string
-	KeyColor       string
-	TitleColor     string
-	OutputColor    string
-	SeparatorColor string
-	Color          bool
-	Width          int
+	Logo            logo.Logo
+	Position        string
+	Padding         int
+	Separator       string
+	SeparatorLength int
+	KeyType         string
+	KeyColor        string
+	TitleColor      string
+	OutputColor     string
+	SeparatorColor  string
+	Color           bool
+	Width           int
 }
 
 func Render(w io.Writer, entries []modules.Entry, o Options) error {
@@ -83,6 +84,7 @@ func buildLines(entries []modules.Entry, o Options, avail int) ([]string, []int)
 		widths = append(widths, width)
 	}
 	titleWidth := 0
+	keyColumnWidth := 0
 	contentWidth := 0
 	for _, entry := range entries {
 		switch entry.Kind {
@@ -91,7 +93,7 @@ func buildLines(entries []modules.Entry, o Options, avail int) ([]string, []int)
 				titleWidth = logo.VisibleWidth(entry.Value)
 			}
 		case modules.KindNormal:
-			contentWidth = max(contentWidth, logo.VisibleWidth(keyLabel(entry, o.KeyType)+o.Separator+entry.Value))
+			keyColumnWidth = max(keyColumnWidth, logo.VisibleWidth(keyLabel(entry, o.KeyType)))
 		case modules.KindRaw:
 			contentWidth = max(contentWidth, logo.VisibleWidth(entry.Value))
 		case modules.KindPalette:
@@ -103,8 +105,17 @@ func buildLines(entries []modules.Entry, o Options, avail int) ([]string, []int)
 			}
 		}
 	}
+	for _, entry := range entries {
+		if entry.Kind == modules.KindNormal {
+			width := keyColumnWidth + logo.VisibleWidth(o.Separator) + logo.VisibleWidth(entry.Value)
+			contentWidth = max(contentWidth, width)
+		}
+	}
 	if titleWidth == 0 {
 		titleWidth = contentWidth
+	}
+	if o.SeparatorLength > 0 {
+		titleWidth = o.SeparatorLength
 	}
 	for _, entry := range entries {
 		switch entry.Kind {
@@ -135,10 +146,12 @@ func buildLines(entries []modules.Entry, o Options, avail int) ([]string, []int)
 				color = *entry.KeyColor
 			}
 			label := keyLabel(entry, o.KeyType)
-			text := paint(label, color, o.Color) +
+			labelWidth := logo.VisibleWidth(label)
+			labelPadding := strings.Repeat(" ", max(keyColumnWidth-labelWidth, 0))
+			text := paint(label, color, o.Color) + labelPadding +
 				paint(o.Separator, o.SeparatorColor, o.Color) +
 				paint(entry.Value, o.OutputColor, o.Color)
-			add(text, logo.VisibleWidth(label+o.Separator+entry.Value))
+			add(text, keyColumnWidth+logo.VisibleWidth(o.Separator)+logo.VisibleWidth(entry.Value))
 		}
 	}
 	return lines, widths

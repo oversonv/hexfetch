@@ -78,7 +78,7 @@ func run(args []string) int {
 	color := colorEnabled(opts.NoColor)
 	logoImage := logo.Render(cfg.LogoColors, color, gradient.TrueColor())
 	position := "left"
-	padding := 1
+	padding := 2
 	if opts.LogoPosition != nil {
 		position = *opts.LogoPosition
 	}
@@ -91,17 +91,18 @@ func run(args []string) int {
 		diagnostics.Add(diagnostic)
 	}
 	renderOptions := render.Options{
-		Logo:           logoImage,
-		Position:       position,
-		Padding:        padding,
-		Separator:      cfg.Display.Separator,
-		KeyType:        cfg.Display.KeyType,
-		KeyColor:       string(cfg.Display.Color.Keys),
-		TitleColor:     string(cfg.Display.Color.Title),
-		OutputColor:    string(cfg.Display.Color.Output),
-		SeparatorColor: string(cfg.Display.Color.Separator),
-		Color:          color,
-		Width:          render.TermWidth(),
+		Logo:            logoImage,
+		Position:        position,
+		Padding:         padding,
+		Separator:       cfg.Display.Separator,
+		SeparatorLength: cfg.Display.SeparatorLength,
+		KeyType:         cfg.Display.KeyType,
+		KeyColor:        string(cfg.Display.Color.Keys),
+		TitleColor:      string(cfg.Display.Color.Title),
+		OutputColor:     string(cfg.Display.Color.Output),
+		SeparatorColor:  string(cfg.Display.Color.Separator),
+		Color:           color,
+		Width:           render.TermWidth(),
 	}
 	if len(renderOptions.Logo.Lines) > 0 && renderOptions.Position != "right" &&
 		!render.LogoFits(logoImage, renderOptions.Padding, renderOptions.Width) {

@@ -27,7 +27,8 @@ func (packages) Run(ctx Context) ([]Entry, error) {
 	}{
 		{"pacman", countDirs("/var/lib/pacman/local")},
 		{"dpkg", countPrefix("/var/lib/dpkg/status", "Status: install ok installed")},
-		{"pkg", countTermux()},
+		// Termux's pkg frontend stores its installed-package database in dpkg format.
+		{"dpkg", countTermux()},
 		{"rpm", countRPM()},
 		{"apk", countPrefix("/lib/apk/db/installed", "P:")},
 		{"xbps", countXbps()},

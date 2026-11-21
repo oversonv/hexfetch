@@ -158,6 +158,49 @@ func TestSeparatorUsesPaletteWidth(t *testing.T) {
 	}
 }
 
+func TestValuesAlignAfterVariableWidthIconsAndKeys(t *testing.T) {
+	entries := []modules.Entry{
+		{Kind: modules.KindNormal, Key: "OS", KeyIcon: "界", Value: "Linux"},
+		{Kind: modules.KindNormal, Key: "Packages", KeyIcon: "\uf1b2", Value: "119"},
+		{Kind: modules.KindNormal, Key: "Shell", KeyIcon: "\uf199", Value: "zsh"},
+	}
+	lines, widths := buildLines(entries, Options{Separator: " » ", KeyType: "both"}, 0)
+	if len(lines) != len(entries) {
+		t.Fatalf("buildLines() returned %d lines, want %d", len(lines), len(entries))
+	}
+	var expectedColumn int
+	for index, line := range lines {
+		label, _, found := strings.Cut(line, " » ")
+		if !found {
+			t.Fatalf("line %d has no separator: %q", index, line)
+		}
+		column := logo.VisibleWidth(label)
+		if index == 0 {
+			expectedColumn = column
+		} else if column != expectedColumn {
+			t.Fatalf("line %d separator starts at visible column %d, want %d: %q", index, column, expectedColumn, line)
+		}
+		if widths[index] != expectedColumn+logo.VisibleWidth(" » ")+logo.VisibleWidth(entries[index].Value) {
+			t.Fatalf("line %d width = %d, want calculated visible width", index, widths[index])
+		}
+	}
+}
+
+func TestSeparatorLengthOverridesTitleWidth(t *testing.T) {
+	entries := []modules.Entry{
+		{Kind: modules.KindTitle, Value: "Hey"},
+		{Kind: modules.KindSeparator, Value: "─"},
+	}
+	lines, widths := buildLines(entries, Options{SeparatorLength: 18}, 0)
+	if len(lines) != 2 || widths[1] != 18 || logo.VisibleWidth(lines[1]) != 18 {
+		t.Fatalf("fixed separator = %q with widths %v, want 18 columns", lines, widths)
+	}
+	lines, widths = buildLines(entries, Options{}, 0)
+	if widths[1] != 3 || logo.VisibleWidth(lines[1]) != 3 {
+		t.Fatalf("automatic separator = %q with widths %v, want title width 3", lines, widths)
+	}
+}
+
 func TestKeyTypeSelectsIconAndKeyLabel(t *testing.T) {
 	entries := []modules.Entry{
 		{Kind: modules.KindNormal, Key: "OS", KeyIcon: "\uf313", Value: "NixOS"},
@@ -167,10 +210,10 @@ func TestKeyTypeSelectsIconAndKeyLabel(t *testing.T) {
 		keyType string
 		want    []string
 	}{
-		{keyType: "", want: []string{"OS » NixOS", "Shell » zsh"}},
-		{keyType: "string", want: []string{"OS » NixOS", "Shell » zsh"}},
-		{keyType: "both", want: []string{"\uf313 OS » NixOS", "Shell » zsh"}},
-		{keyType: "icon", want: []string{"\uf313 » NixOS", "Shell » zsh"}},
+		{keyType: "", want: []string{"OS    » NixOS", "Shell » zsh"}},
+		{keyType: "string", want: []string{"OS    » NixOS", "Shell » zsh"}},
+		{keyType: "both", want: []string{"\uf313 OS  » NixOS", "Shell » zsh"}},
+		{keyType: "icon", want: []string{"\uf313     » NixOS", "Shell » zsh"}},
 	}
 	for _, test := range tests {
 		lines, widths := buildLines(entries, Options{Separator: " » ", KeyType: test.keyType}, 0)

@@ -90,6 +90,7 @@ func TestLoadYAMLDisplayModulesAndColors(t *testing.T) {
 	document := yamlWithColors(values) + `  display:
     separator: " | "
     separator_char: "="
+    separator_length: 18
     color:
       keys: blue
   modules:
@@ -110,7 +111,7 @@ func TestLoadYAMLDisplayModulesAndColors(t *testing.T) {
           - veth
 `
 	cfg, diagnostics := Load(writeYAML(t, document))
-	if cfg.Display.Separator != " | " || cfg.Display.SeparatorChar != "=" || cfg.Display.Color.Keys != "34" {
+	if cfg.Display.Separator != " | " || cfg.Display.SeparatorChar != "=" || cfg.Display.SeparatorLength != 18 || cfg.Display.Color.Keys != "34" {
 		t.Fatalf("display config = %+v", cfg.Display)
 	}
 	if cfg.LogoColors[0] != (gradient.RGB{R: 1, G: 2, B: 3}) || cfg.LogoColors[11] != (gradient.RGB{R: 34, G: 35, B: 36}) {
@@ -131,7 +132,7 @@ func TestLoadYAMLDisplayModulesAndColors(t *testing.T) {
 	if !ok || len(exclude) != 2 || exclude[0] != "docker" || exclude[1] != "veth" {
 		t.Fatalf("localip exclude options = %#v", options["exclude"])
 	}
-	if hasWarning(diagnostics, "Invalid config field") {
+	if hasWarning(diagnostics, "Invalid config field") || hasWarning(diagnostics, "Unknown config field") {
 		t.Fatalf("unexpected config warning: %+v", diagnostics)
 	}
 }
@@ -178,6 +179,34 @@ func TestInvalidModuleItemsKeepDefaultList(t *testing.T) {
 	}
 	if !hasWarning(diagnostics, "hexfetch.modules.items") {
 		t.Fatalf("missing invalid items warning: %+v", diagnostics)
+	}
+}
+
+func TestResolvedConfigPreservesSeparatorLength(t *testing.T) {
+	cfg := Default()
+	cfg.Display.SeparatorLength = 18
+	data, err := marshalResolvedConfig(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	loaded, diagnostics := loadYAML(Default(), data, "resolved.yaml")
+	if loaded.Display.SeparatorLength != 18 {
+		t.Fatalf("round-trip separator length = %d, want 18", loaded.Display.SeparatorLength)
+	}
+	if hasWarning(diagnostics, "separator_length") {
+		t.Fatalf("round-trip produced separator length warning: %+v", diagnostics)
+	}
+}
+
+func TestInvalidSeparatorLengthKeepsAutomaticWidth(t *testing.T) {
+	for _, value := range []string{"-1", "4097", "wide"} {
+		cfg, diagnostics := Load(writeYAML(t, "hexfetch:\n  display:\n    separator_length: "+value+"\n"))
+		if cfg.Display.SeparatorLength != 0 {
+			t.Fatalf("separator_length %q = %d, want automatic width", value, cfg.Display.SeparatorLength)
+		}
+		if !hasWarning(diagnostics, "hexfetch.display.separator_length") {
+			t.Fatalf("separator_length %q did not produce a validation warning: %+v", value, diagnostics)
+		}
 	}
 }
 

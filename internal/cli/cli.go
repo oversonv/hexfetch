@@ -39,7 +39,7 @@ func Parse(args []string) (Options, error) {
 	position := set.StringP("logo-position", "p", "left", "Logo side: left or right")
 	structure := set.StringP("structure", "s", "", "Colon-separated list of modules to print")
 	configPath := set.StringP("config", "c", "", "Path to a YAML config file or --migrate-config destination")
-	padding := set.Int("padding", 1, "Spaces between the logo and the modules")
+	padding := set.Int("padding", 2, "Spaces between the logo and the modules")
 	separator := set.String("separator", " » ", "Separator between key and value")
 	colorKeys := set.Int("color-keys", 4, "ANSI 256-color index for module keys (0-255)")
 	keyType := set.String("key-type", "string", "Key display: string, icon or both")

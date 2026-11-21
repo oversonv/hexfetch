@@ -86,7 +86,7 @@ Boolean flags also accept `=true` or `=false`.
 | `-c, --config PATH` | `$HOME/hex/hexfetch.yaml` | Personal YAML config file. Also the destination for `--gen-config` and `--migrate-config` |
 | `-s, --structure LIST` | from config | Colon-separated modules to print. Selection and order only; module settings still come from YAML |
 | `-p, --logo-position SIDE` | `left` | Logo side: `left` or `right` |
-| `--padding N` | `1` | Spaces between the logo and the modules |
+| `--padding N` | `2` | Spaces between the logo and the modules |
 | `--logo-colors LIST` | built-in | Exactly 12 comma-separated `38;2;R;G;B` values |
 | `--separator STR` | `" » "` | Separator between key and value |
 | `--key-type TYPE` | `string` | Key display: `string`, `icon` or `both` |
@@ -113,6 +113,15 @@ hexfetch --gen-config
 ```
 
 `--gen-config` creates the parent directory if needed. If the file already exists, it exits with status 1 and leaves the file untouched.
+
+The repository also includes `hex/hexfetch.yaml`, a Termux profile matching the Fastfetch icon set in the example output. Install it with:
+
+```sh
+mkdir -p "$HOME/hex"
+cp hex/hexfetch.yaml "$HOME/hex/hexfetch.yaml"
+```
+
+The profile uses the `command` module to display the installed Python version; it does not assume a built-in Python module exists.
 
 <details>
 <summary>Default configuration</summary>
@@ -179,7 +188,7 @@ Everything lives under the `hexfetch` key (the old `nixfetch` key is still accep
 
 **Colors** accept a palette number (0–255), a name (`black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, with an optional `light_` or `bright_` prefix) or an ANSI SGR string such as `1;38;2;150;150;150`.
 
-**Precedence:** CLI flag, then YAML, then built-in default.
+**Precedence:** CLI flag, then YAML, then built-in default. Normal module rows share a calculated key column, so values stay aligned even when icons or key names have different terminal widths.
 
 ### Selecting modules
 
