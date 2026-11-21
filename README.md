@@ -10,7 +10,7 @@ Smooth gradient logo · 62 modules · YAML configuration · x86, ARM, RISC-V and
 ![Platform: Linux](https://img.shields.io/badge/platform-linux-informational)
 ![Go 1.26+](https://img.shields.io/badge/Go-1.26%2B-00ADD8)
 
-[Install](#install) · [Quick start](#quick-start) · [Configuration](#configuration) · [Modules](#modules) · [Releases](https://gitlab.com/kst20032021/hexfetch/-/releases)
+[Install](#install) · [Quick start](#quick-start) · [Configuration](#configuration) · [Modules](#modules) · [Releases](https://github.com/oversonv/hexfetch/releases)
 
 <img src="docs/view.jpg" alt="hexfetch output in Termux: gradient logo on the left, module list on the right" width="720">
 
@@ -33,7 +33,7 @@ Smooth gradient logo · 62 modules · YAML configuration · x86, ARM, RISC-V and
 
 ### Prebuilt binary
 
-Download the file for your platform and `SHA256SUMS` from the [Releases](https://gitlab.com/kst20032021/hexfetch/-/releases) page.
+Download the file for your platform and `SHA256SUMS` from the [Releases](https://github.com/oversonv/hexfetch/releases) page.
 
 | Target | Platform |
 | --- | --- |
@@ -61,7 +61,7 @@ The Linux binaries are static. The Android build uses the system linker (`/syste
 Requires Go 1.26 or newer (see `go.mod`).
 
 ```sh
-git clone https://gitlab.com/kst20032021/hexfetch.git
+git clone https://github.com/oversonv/hexfetch.git
 cd hexfetch
 CGO_ENABLED=0 go build -o hexfetch ./cmd/hexfetch
 ./hexfetch --version
@@ -482,7 +482,7 @@ modules/           one file per module, plus testdata/ fixtures
 
 **Adding a module.** Create one file in `modules/` that registers the module in `init()` with `Register`, and add an entry to `modules/metadata.go` so that `--list-modules --verbose` shows its category and description.
 
-**Releases.** `release.py` builds the six targets (`-trimpath`, stripped, `CGO_ENABLED=0`), writes `SHA256SUMS`, fills `release_template.md` and uploads the assets with `glab`.
+**Releases.** `release.py` builds the six targets (`-trimpath`, stripped, `CGO_ENABLED=0`), writes `SHA256SUMS`, fills `release_template.md` and uploads the assets with `gh`.
 
 ## License
 
