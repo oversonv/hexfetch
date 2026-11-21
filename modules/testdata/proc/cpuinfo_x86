@@ -1,0 +1,32 @@
+processor	: 0
+vendor_id	: GenuineIntel
+model name	: Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz
+physical id	: 0
+core id		: 0
+cpu cores	: 2
+cpu MHz		: 2600.000
+
+processor	: 1
+vendor_id	: GenuineIntel
+model name	: Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz
+physical id	: 0
+core id		: 1
+cpu cores	: 2
+cpu MHz		: 3600.000
+
+processor	: 2
+vendor_id	: GenuineIntel
+model name	: Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz
+physical id	: 1
+core id		: 0
+cpu cores	: 2
+cpu MHz		: 2600.000
+
+processor	: 3
+vendor_id	: GenuineIntel
+model name	: Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz
+physical id	: 1
+core id		: 1
+cpu cores	: 2
+cpu MHz		: 2600.000
+

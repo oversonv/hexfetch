@@ -1,0 +1,6 @@
+/dev/sda1 / ext4 rw,relatime 0 0
+proc /proc proc rw 0 0
+sysfs /sys sysfs rw 0 0
+tmpfs /tmp tmpfs rw 0 0
+/dev/sdb1 /mnt/my\040disk vfat rw 0 0
+overlay /var/lib/docker/overlay2/abc overlay rw 0 0

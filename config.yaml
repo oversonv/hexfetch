@@ -1,0 +1,38 @@
+hexfetch:
+  logo_colors:
+    - "38;2;133;104;242"
+    - "38;2;206;177;240"
+    - "38;2;107;106;255"
+    - "38;2;79;185;254"
+    - "38;2;206;177;240"
+    - "38;2;133;104;242"
+    - "38;2;79;185;254"
+    - "38;2;107;106;255"
+    - "38;2;206;177;240"
+    - "38;2;133;104;242"
+    - "38;2;107;106;255"
+    - "38;2;79;185;254"
+  display:
+    separator: " » "
+    separator_char: "-"
+    color:
+      keys: "1;38;2;150;150;150"
+      title: "38;2;255;255;255"
+      output: "38;2;255;255;255"
+      separator: "38;2;130;140;138"
+  modules:
+    items:
+      - title
+      - separator
+      - shell
+      - terminal
+      - terminalfont
+      - wm
+      - de
+      - theme
+      - icons
+      - cursor
+      - packages
+      - uptime
+    title:
+      format: "Welcome!"
