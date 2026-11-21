@@ -26,9 +26,10 @@ import (
 var DefaultYAML string
 
 const (
-	// UserDirName and UserFileName locate the personal config: $HOME/hex/hexfetch.yaml.
-	UserDirName  = "hex"
-	UserFileName = "hexfetch.yaml"
+	// UserDirName, UserSubDirName and UserFileName locate the personal config: $HOME/hex/set/hexfetch.yaml.
+	UserDirName    = "hex"
+	UserSubDirName = "set"
+	UserFileName   = "hexfetch.yaml"
 )
 
 type ColorConfig struct {
@@ -84,7 +85,7 @@ func DefaultPath() string {
 	if err != nil || strings.TrimSpace(home) == "" {
 		return ""
 	}
-	return filepath.Join(home, UserDirName, UserFileName)
+	return filepath.Join(home, UserDirName, UserSubDirName, UserFileName)
 }
 
 func Load(path string) (Config, []diag.Diagnostic) {

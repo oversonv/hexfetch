@@ -71,7 +71,7 @@ CGO_ENABLED=0 go build -o hexfetch ./cmd/hexfetch
 
 ```sh
 hexfetch                                   # default layout
-hexfetch --gen-config                      # write $HOME/hex/hexfetch.yaml
+hexfetch --gen-config                      # write $HOME/hex/set/hexfetch.yaml
 hexfetch -s "title:separator:os:kernel:uptime"
 hexfetch --logo-position right --padding 4
 hexfetch --list-modules --verbose          # every module with category and description
@@ -83,7 +83,7 @@ Boolean flags also accept `=true` or `=false`.
 
 | Flag | Default | Description |
 | --- | --- | --- |
-| `-c, --config PATH` | `$HOME/hex/hexfetch.yaml` | Personal YAML config file. Also the destination for `--gen-config` and `--migrate-config` |
+| `-c, --config PATH` | `$HOME/hex/set/hexfetch.yaml` | Personal YAML config file. Also the destination for `--gen-config` and `--migrate-config` |
 | `-s, --structure LIST` | from config | Colon-separated modules to print. Selection and order only; module settings still come from YAML |
 | `-p, --logo-position SIDE` | `left` | Logo side: `left` or `right` |
 | `--padding N` | `2` | Spaces between the logo and the modules |
@@ -106,7 +106,7 @@ Layout options (`--logo-position`, `--padding`) are CLI-only and are not stored 
 
 ## Configuration
 
-Defaults are built into the binary (`internal/config/default.yaml`, embedded with `go:embed`). Your personal file is `$HOME/hex/hexfetch.yaml`; it is layered on top of the defaults, so it only needs the settings you change. Use `-c PATH` to load another file. A missing default file is fine; a missing `-c` file produces a warning.
+Defaults are built into the binary (`internal/config/default.yaml`, embedded with `go:embed`). Your personal file is `$HOME/hex/set/hexfetch.yaml`; it is layered on top of the defaults, so it only needs the settings you change. Use `-c PATH` to load another file. A missing default file is fine; a missing `-c` file produces a warning.
 
 ```sh
 hexfetch --gen-config
@@ -121,7 +121,7 @@ A Termux-style profile (Fastfetch-like icons, Python version via the `command` m
 
 ```yaml
 # hexfetch default configuration (embedded into the binary).
-# Personal settings go to $HOME/hex/hexfetch.yaml and are layered on top of this file.
+# Personal settings go to $HOME/hex/set/hexfetch.yaml and are layered on top of this file.
 # Create that file with: hexfetch --gen-config
 hexfetch:
   logo_colors:
@@ -282,7 +282,7 @@ hexfetch:
 Old `nixos.toml`, `config.jsonc` and `config.json` files are not loaded automatically. If the default YAML file is missing and a legacy TOML file exists, hexfetch prints a warning with its path.
 
 ```sh
-hexfetch --migrate-config                 # writes $HOME/hex/hexfetch.yaml
+hexfetch --migrate-config                 # writes $HOME/hex/set/hexfetch.yaml
 hexfetch --migrate-config -c ./new.yaml   # choose the destination
 ```
 

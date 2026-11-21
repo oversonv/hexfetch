@@ -1,13 +1,13 @@
 # Termux profile (Fastfetch-style icons)
 
 A personal profile for Termux with a Fastfetch-like look. Save it as
-`$HOME/hex/hexfetch.yaml`; it is layered on top of the built-in defaults.
+`$HOME/hex/set/hexfetch.yaml`; it is layered on top of the built-in defaults.
 Python is shown through the generic `command` module, so no built-in Python
 module is required.
 
 ```sh
-mkdir -p "$HOME/hex"
-$EDITOR "$HOME/hex/hexfetch.yaml"   # paste the profile below
+mkdir -p "$HOME/hex/set"
+$EDITOR "$HOME/hex/set/hexfetch.yaml"   # paste the profile below
 ```
 
 ```yaml

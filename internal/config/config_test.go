@@ -79,7 +79,7 @@ func TestDefaultEnablesTitleBeforeSeparator(t *testing.T) {
 func TestDefaultPathUsesHexDirectory(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	want := filepath.Join(home, "hex", "hexfetch.yaml")
+	want := filepath.Join(home, "hex", "set", "hexfetch.yaml")
 	if got := DefaultPath(); got != want {
 		t.Fatalf("DefaultPath() = %q, want %q", got, want)
 	}
@@ -670,7 +670,7 @@ func TestGenerateCreatesDirectoryAndDoesNotOverwrite(t *testing.T) {
 func TestLoadUsesHomeHexfetchConfig(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	path := filepath.Join(home, "hex", "hexfetch.yaml")
+	path := filepath.Join(home, "hex", "set", "hexfetch.yaml")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -722,7 +722,7 @@ func TestMigrateLegacyTOMLToYAMLPreservesSourceAndSupportedSettings(t *testing.T
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	source := filepath.Join(home, "nixos", "nixos.toml")
-	destination := filepath.Join(home, "hex", "hexfetch.yaml")
+	destination := filepath.Join(home, "hex", "set", "hexfetch.yaml")
 	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
 		t.Fatal(err)
 	}
