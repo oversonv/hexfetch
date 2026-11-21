@@ -11,7 +11,7 @@ func init() { Register(initsystem{}) }
 func (initsystem) Name() string { return "initsystem" }
 
 func (initsystem) Run(ctx Context) ([]Entry, error) {
-	comm, _ := ReadTrim("/proc/1/comm")
+	comm, _ := ReadTrim(procPath("1", "comm"))
 	switch comm {
 	case "systemd", "dinit", "sinit":
 		return Single(ctx, "Init", comm), nil

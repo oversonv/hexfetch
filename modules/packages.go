@@ -35,6 +35,8 @@ func (packages) Run(ctx Context) ([]Entry, error) {
 		{"nix", countNix(home)},
 		{"flatpak", countDirs("/var/lib/flatpak/app") + countDirs(filepath.Join(home, ".local/share/flatpak/app"))},
 		{"snap", countSnaps()},
+		{"portage", countPortage("/var/db/pkg")},
+		{"pkgtool", countFiles("/var/log/packages")},
 	}
 	var parts []string
 	for _, item := range counts {
@@ -74,6 +76,36 @@ func countPrefix(path, prefix string) int {
 	count := 0
 	for scanner.Scan() {
 		if bytes.HasPrefix(scanner.Bytes(), needle) {
+			count++
+		}
+	}
+	return count
+}
+
+// countPortage counts Gentoo packages stored as <root>/<category>/<package>/.
+func countPortage(root string) int {
+	categories, err := os.ReadDir(root)
+	if err != nil {
+		return 0
+	}
+	total := 0
+	for _, category := range categories {
+		if category.IsDir() {
+			total += countDirs(filepath.Join(root, category.Name()))
+		}
+	}
+	return total
+}
+
+// countFiles counts regular files in a directory (Slackware package logs).
+func countFiles(path string) int {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return 0
+	}
+	count := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
 			count++
 		}
 	}

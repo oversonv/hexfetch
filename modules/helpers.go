@@ -34,6 +34,16 @@ func etcPath(elem ...string) string {
 	return filepath.Join(append([]string{etcRoot}, elem...)...)
 }
 
+// userConfigFile returns a path inside the user's config directory. It honors
+// XDG_CONFIG_HOME and falls back to $HOME/.config, like os.UserConfigDir.
+func userConfigFile(elem ...string) (string, bool) {
+	dir, err := os.UserConfigDir()
+	if err != nil || dir == "" {
+		return "", false
+	}
+	return filepath.Join(append([]string{dir}, elem...)...), true
+}
+
 func readFile(path string) ([]byte, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

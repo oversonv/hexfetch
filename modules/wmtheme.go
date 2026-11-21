@@ -4,7 +4,6 @@ package modules
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -40,11 +39,11 @@ func (wmtheme) Run(ctx Context) ([]Entry, error) {
 }
 
 func wmthemeKDE() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
+	path, ok := userConfigFile("kdeglobals")
+	if !ok {
 		return ""
 	}
-	data, err := os.ReadFile(filepath.Join(home, ".config", "kdeglobals"))
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return ""
 	}

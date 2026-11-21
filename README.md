@@ -114,14 +114,7 @@ hexfetch --gen-config
 
 `--gen-config` creates the parent directory if needed. If the file already exists, it exits with status 1 and leaves the file untouched.
 
-The repository also includes `hex/hexfetch.yaml`, a Termux profile matching the Fastfetch icon set in the example output. Install it with:
-
-```sh
-mkdir -p "$HOME/hex"
-cp hex/hexfetch.yaml "$HOME/hex/hexfetch.yaml"
-```
-
-The profile uses the `command` module to display the installed Python version; it does not assume a built-in Python module exists.
+A Termux-style profile (Fastfetch-like icons, Python version via the `command` module) is described in [docs/termux-profile.md](docs/termux-profile.md).
 
 <details>
 <summary>Default configuration</summary>

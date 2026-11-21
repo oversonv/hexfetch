@@ -31,7 +31,7 @@ func (wm) Run(ctx Context) ([]Entry, error) {
 		"spectrwm", "leftwm", "ratpoison",
 	}
 	aliases := map[string]string{"gnome-shell": "Mutter", "kwin_wayland": "KWin", "kwin_x11": "KWin"}
-	entries, err := os.ReadDir("/proc")
+	entries, err := os.ReadDir(procPath())
 	if err != nil {
 		return nil, wrapUnavailableError("read process table", err)
 	}
@@ -40,7 +40,7 @@ func (wm) Run(ctx Context) ([]Entry, error) {
 		if name[0] < '0' || name[0] > '9' {
 			continue
 		}
-		comm, err := ReadTrim("/proc/" + name + "/comm")
+		comm, err := ReadTrim(procPath(name, "comm"))
 		if err != nil || !slices.Contains(known, comm) {
 			continue
 		}

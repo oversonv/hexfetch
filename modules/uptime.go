@@ -14,7 +14,7 @@ func init() { Register(uptime{}) }
 func (uptime) Name() string { return "uptime" }
 
 func readUptime() (int, error) {
-	text, readErr := ReadTrim("/proc/uptime")
+	text, readErr := ReadTrim(procPath("uptime"))
 	var parseErr error
 	if readErr == nil {
 		field, _, _ := strings.Cut(text, " ")

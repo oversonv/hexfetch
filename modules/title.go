@@ -40,7 +40,7 @@ func hostName() string {
 	if name, err := os.Hostname(); err == nil && name != "" {
 		return name
 	}
-	if name, err := ReadTrim("/proc/sys/kernel/hostname"); err == nil && name != "" {
+	if name, err := ReadTrim(procPath("sys", "kernel", "hostname")); err == nil && name != "" {
 		return name
 	}
 	return "localhost"

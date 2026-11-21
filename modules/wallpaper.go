@@ -103,11 +103,11 @@ func xfconfWallpaper(property string) string {
 }
 
 func wallpaperKDE() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
+	path, ok := userConfigFile("plasma-org.kde.plasma-desktop-appletsrc")
+	if !ok {
 		return ""
 	}
-	data, err := os.ReadFile(filepath.Join(home, ".config", "plasma-org.kde.plasma-desktop-appletsrc"))
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return ""
 	}

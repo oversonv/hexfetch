@@ -7,7 +7,7 @@ import (
 )
 
 func kernelDisplay() string {
-	release, err := ReadTrim("/proc/sys/kernel/osrelease")
+	release, err := ReadTrim(procPath("sys", "kernel", "osrelease"))
 	if err != nil || release == "" {
 		release = unameRelease()
 	}

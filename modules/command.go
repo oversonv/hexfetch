@@ -4,7 +4,6 @@ import (
 	"context"
 	"os/exec"
 	"strings"
-	"time"
 )
 
 type command struct{}
@@ -21,7 +20,7 @@ func (command) Run(ctx Context) ([]Entry, error) {
 	if ctx.Command == "" {
 		return nil, Unsupported("command is not configured")
 	}
-	timeout, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	timeout, cancel := context.WithTimeout(context.Background(), commandTimeout)
 	defer cancel()
 	out, err := exec.CommandContext(timeout, "sh", "-c", ctx.Command).Output()
 	if err != nil {
