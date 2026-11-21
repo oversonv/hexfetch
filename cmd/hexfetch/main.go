@@ -74,7 +74,7 @@ func run(args []string) int {
 	}
 	applyOverrides(&cfg, opts, diagnostics)
 
-	debug := opts.Debug || envEnabled("NIXFETCH_DEBUG")
+	debug := opts.Debug || envEnabled("HEXFETCH_DEBUG") || envEnabled("NIXFETCH_DEBUG")
 	color := colorEnabled(opts.NoColor)
 	logoImage := logo.Render(cfg.LogoColors, color, gradient.TrueColor())
 	position := "left"

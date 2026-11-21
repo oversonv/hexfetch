@@ -329,3 +329,14 @@ func cachedOSRelease() (map[string]string, error) {
 	})
 	return osReleaseVal, osReleaseErr
 }
+
+// envFirst returns the first non-empty environment variable among names.
+// The HEXFETCH_* name is listed first; NIXFETCH_* is kept as a deprecated fallback.
+func envFirst(names ...string) string {
+	for _, name := range names {
+		if value := os.Getenv(name); value != "" {
+			return value
+		}
+	}
+	return ""
+}

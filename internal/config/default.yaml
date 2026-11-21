@@ -1,3 +1,6 @@
+# hexfetch default configuration (embedded into the binary).
+# Personal settings go to $HOME/hex/hexfetch.yaml and are layered on top of this file.
+# Create that file with: hexfetch --gen-config
 hexfetch:
   logo_colors:
     - "38;2;133;104;242"

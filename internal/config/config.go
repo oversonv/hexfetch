@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -21,45 +22,14 @@ import (
 	moduleRegistry "hexfetch/modules"
 )
 
-const DefaultYAML = `hexfetch:
-  logo_colors:
-    - "38;2;133;104;242"
-    - "38;2;206;177;240"
-    - "38;2;107;106;255"
-    - "38;2;79;185;254"
-    - "38;2;206;177;240"
-    - "38;2;133;104;242"
-    - "38;2;79;185;254"
-    - "38;2;107;106;255"
-    - "38;2;206;177;240"
-    - "38;2;133;104;242"
-    - "38;2;107;106;255"
-    - "38;2;79;185;254"
-  display:
-    separator: " » "
-    separator_char: "-"
-    color:
-      keys: "1;38;2;150;150;150"
-      title: "38;2;255;255;255"
-      output: "38;2;255;255;255"
-      separator: "38;2;130;140;138"
-  modules:
-    items:
-      - title
-      - separator
-      - shell
-      - terminal
-      - terminalfont
-      - wm
-      - de
-      - theme
-      - icons
-      - cursor
-      - packages
-      - uptime
-    title:
-      format: "Welcome!"
-`
+//go:embed default.yaml
+var DefaultYAML string
+
+const (
+	// UserDirName and UserFileName locate the personal config: $HOME/hex/hexfetch.yaml.
+	UserDirName  = "hex"
+	UserFileName = "hexfetch.yaml"
+)
 
 type ColorConfig struct {
 	Keys      Color
@@ -113,7 +83,7 @@ func DefaultPath() string {
 	if err != nil || strings.TrimSpace(home) == "" {
 		return ""
 	}
-	return filepath.Join(home, "hexfetch", "config.yaml")
+	return filepath.Join(home, UserDirName, UserFileName)
 }
 
 func Load(path string) (Config, []diag.Diagnostic) {
@@ -133,8 +103,12 @@ func Load(path string) (Config, []diag.Diagnostic) {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
+			missingLevel := diag.Info
+			if path != "" {
+				missingLevel = diag.Warning
+			}
 			diagnostics := []diag.Diagnostic{{
-				Level:   diag.Info,
+				Level:   missingLevel,
 				Source:  configPath,
 				Message: fmt.Sprintf("Config file %q not found; using built-in defaults.", configPath),
 			}}
@@ -152,8 +126,7 @@ func Load(path string) (Config, []diag.Diagnostic) {
 		return cfg, []diag.Diagnostic{{
 			Level:   diag.Warning,
 			Source:  configPath,
-			Message: fmt.Sprintf("Unable to read config file %q.", configPath),
-			Detail:  err.Error(),
+			Message: fmt.Sprintf("Unable to read config file %q: %s", configPath, err.Error()),
 		}}
 	}
 	return loadYAML(cfg, data, configPath)
@@ -163,11 +136,17 @@ func loadYAML(cfg Config, data []byte, configPath string) (Config, []diag.Diagno
 	decoder := yaml.NewDecoder(bytes.NewReader(data))
 	var document map[string]any
 	if err := decoder.Decode(&document); err != nil {
+		if errors.Is(err, io.EOF) {
+			return cfg, []diag.Diagnostic{{
+				Level:   diag.Info,
+				Source:  configPath,
+				Message: fmt.Sprintf("Config file %q is empty; using built-in defaults.", configPath),
+			}}
+		}
 		return cfg, []diag.Diagnostic{{
 			Level:   diag.Warning,
 			Source:  configPath,
-			Message: fmt.Sprintf("YAML parsing error in %q.", configPath),
-			Detail:  err.Error(),
+			Message: fmt.Sprintf("YAML parsing error in %q: %s", configPath, err.Error()),
 		}}
 	}
 	var extra any
@@ -179,8 +158,7 @@ func loadYAML(cfg Config, data []byte, configPath string) (Config, []diag.Diagno
 		return cfg, []diag.Diagnostic{{
 			Level:   diag.Warning,
 			Source:  configPath,
-			Message: fmt.Sprintf("YAML parsing error in %q.", configPath),
-			Detail:  detail,
+			Message: fmt.Sprintf("YAML parsing error in %q: %s", configPath, detail),
 		}}
 	}
 	if document == nil {
@@ -197,6 +175,17 @@ func loadYAML(cfg Config, data []byte, configPath string) (Config, []diag.Diagno
 		Source:  configPath,
 		Message: fmt.Sprintf("Loaded config file %q.", configPath),
 	}}
+	if _, present := document["hexfetch"]; !present {
+		if legacyRoot, found := document["nixfetch"]; found {
+			document["hexfetch"] = legacyRoot
+			delete(document, "nixfetch")
+			diagnostics = append(diagnostics, diag.Diagnostic{
+				Level:   diag.Warning,
+				Source:  configPath,
+				Message: `Config root "nixfetch" is deprecated; rename it to "hexfetch".`,
+			})
+		}
+	}
 	checkUnknown(&diagnostics, configPath, "", document, "hexfetch")
 	hexfetchValue, exists := document["hexfetch"]
 	if !exists {
@@ -623,8 +612,7 @@ func addDiagnostic(diagnostics *[]diag.Diagnostic, source, field, detail string)
 	*diagnostics = append(*diagnostics, diag.Diagnostic{
 		Level:   diag.Warning,
 		Source:  source,
-		Message: fmt.Sprintf("Invalid config field %q.", field),
-		Detail:  detail,
+		Message: fmt.Sprintf("Invalid config field %q: %s.", field, detail),
 	})
 }
 
@@ -838,6 +826,9 @@ func marshalResolvedConfig(cfg Config) ([]byte, error) {
 			"separator": string(cfg.Display.Color.Separator),
 		},
 	}
+	if cfg.Display.KeyType != "" {
+		display["key"] = map[string]any{"type": cfg.Display.KeyType}
+	}
 	moduleSettings := map[string]any{"items": cfg.Modules.Items}
 	for _, name := range sortedModuleNames(cfg.Modules.Settings) {
 		spec := cfg.Modules.Settings[name]
@@ -858,6 +849,9 @@ func marshalResolvedConfig(cfg Config) ([]byte, error) {
 			if spec.Key != "" {
 				fields["key"] = spec.Key
 			}
+			if spec.KeyIcon != "" {
+				fields["key_icon"] = spec.KeyIcon
+			}
 			if spec.KeyColor != nil {
 				fields["key_color"] = string(*spec.KeyColor)
 			}
@@ -870,6 +864,10 @@ func marshalResolvedConfig(cfg Config) ([]byte, error) {
 				case "key":
 					if spec.Key != "" {
 						fields[field] = spec.Key
+					}
+				case "key_icon":
+					if spec.KeyIcon != "" {
+						fields[field] = spec.KeyIcon
 					}
 				case "text":
 					if spec.Text != "" {
@@ -1018,7 +1016,35 @@ func writeNewFile(path string, data []byte, mode os.FileMode) error {
 		if errors.Is(err, os.ErrExist) {
 			return fmt.Errorf("%s already exists, refusing to overwrite: %w", path, os.ErrExist)
 		}
-		return fmt.Errorf("atomically create config file %q: %w", path, err)
+		// Some filesystems (Android/Termux app data) forbid hard links.
+		return createExclusive(path, data, mode)
+	}
+	return nil
+}
+
+// createExclusive writes a new file without overwriting an existing one.
+// It is the fallback for filesystems where os.Link is not permitted.
+func createExclusive(path string, data []byte, mode os.FileMode) error {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode)
+	if err != nil {
+		if errors.Is(err, os.ErrExist) {
+			return fmt.Errorf("%s already exists, refusing to overwrite: %w", path, os.ErrExist)
+		}
+		return fmt.Errorf("create config file %q: %w", path, err)
+	}
+	if _, err := file.Write(data); err != nil {
+		file.Close()
+		os.Remove(path)
+		return fmt.Errorf("write config file %q: %w", path, err)
+	}
+	if err := file.Sync(); err != nil {
+		file.Close()
+		os.Remove(path)
+		return fmt.Errorf("sync config file %q: %w", path, err)
+	}
+	if err := file.Close(); err != nil {
+		os.Remove(path)
+		return fmt.Errorf("close config file %q: %w", path, err)
 	}
 	return nil
 }

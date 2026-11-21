@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 )
@@ -27,7 +26,7 @@ func (publicip) OptionSchema() map[string]OptionDefinition {
 const defaultPublicIPURL = "https://api.ipify.org"
 
 func (publicip) Run(ctx Context) ([]Entry, error) {
-	endpoint := ctx.OptionString("url", os.Getenv("NIXFETCH_PUBLIC_IP_URL"))
+	endpoint := ctx.OptionString("url", envFirst("HEXFETCH_PUBLIC_IP_URL", "NIXFETCH_PUBLIC_IP_URL"))
 	if endpoint == "" {
 		endpoint = defaultPublicIPURL
 	}

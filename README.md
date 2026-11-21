@@ -71,7 +71,7 @@ CGO_ENABLED=0 go build -o hexfetch ./cmd/hexfetch
 
 ```sh
 hexfetch                                   # default layout
-hexfetch --gen-config                      # write $HOME/hexfetch/config.yaml
+hexfetch --gen-config                      # write $HOME/hex/hexfetch.yaml
 hexfetch -s "title:separator:os:kernel:uptime"
 hexfetch --logo-position right --padding 4
 hexfetch --list-modules --verbose          # every module with category and description
@@ -83,7 +83,7 @@ Boolean flags also accept `=true` or `=false`.
 
 | Flag | Default | Description |
 | --- | --- | --- |
-| `-c, --config PATH` | `$HOME/hexfetch/config.yaml` | YAML config file. Also the destination for `--gen-config` and `--migrate-config` |
+| `-c, --config PATH` | `$HOME/hex/hexfetch.yaml` | Personal YAML config file. Also the destination for `--gen-config` and `--migrate-config` |
 | `-s, --structure LIST` | from config | Colon-separated modules to print. Selection and order only; module settings still come from YAML |
 | `-p, --logo-position SIDE` | `left` | Logo side: `left` or `right` |
 | `--padding N` | `1` | Spaces between the logo and the modules |
@@ -106,7 +106,7 @@ Layout options (`--logo-position`, `--padding`) are CLI-only and are not stored 
 
 ## Configuration
 
-The default file is `$HOME/hexfetch/config.yaml`. Use `-c PATH` to load another one.
+Defaults are built into the binary (`internal/config/default.yaml`, embedded with `go:embed`). Your personal file is `$HOME/hex/hexfetch.yaml`; it is layered on top of the defaults, so it only needs the settings you change. Use `-c PATH` to load another file. A missing default file is fine; a missing `-c` file produces a warning.
 
 ```sh
 hexfetch --gen-config
@@ -118,6 +118,9 @@ hexfetch --gen-config
 <summary>Default configuration</summary>
 
 ```yaml
+# hexfetch default configuration (embedded into the binary).
+# Personal settings go to $HOME/hex/hexfetch.yaml and are layered on top of this file.
+# Create that file with: hexfetch --gen-config
 hexfetch:
   logo_colors:
     - "38;2;133;104;242"
@@ -162,7 +165,7 @@ hexfetch:
 
 ### Schema
 
-Everything lives under the `hexfetch` key. There is no `logo` section.
+Everything lives under the `hexfetch` key (the old `nixfetch` key is still accepted as a deprecated alias and produces a warning). There is no `logo` section.
 
 | Key | Type | Description |
 | --- | --- | --- |
@@ -277,7 +280,7 @@ hexfetch:
 Old `nixos.toml`, `config.jsonc` and `config.json` files are not loaded automatically. If the default YAML file is missing and a legacy TOML file exists, hexfetch prints a warning with its path.
 
 ```sh
-hexfetch --migrate-config                 # writes $HOME/hexfetch/config.yaml
+hexfetch --migrate-config                 # writes $HOME/hex/hexfetch.yaml
 hexfetch --migrate-config -c ./new.yaml   # choose the destination
 ```
 
@@ -416,7 +419,7 @@ Run `hexfetch --list-modules --verbose` for the same list from your binary.
 
 Notes:
 
-- `publicip` and `weather` make network requests only when listed in `modules.items`. The endpoint comes from the `url` option or from `NIXFETCH_PUBLIC_IP_URL` and `NIXFETCH_WEATHER_URL`.
+- `publicip` and `weather` make network requests only when listed in `modules.items`. The endpoint comes from the `url` option or from `HEXFETCH_PUBLIC_IP_URL` and `HEXFETCH_WEATHER_URL`.
 - `command`, `wallpaper`, `wmtheme`, `media`, `player` and `weather` call external programs such as `playerctl`, `swww`, `hyprctl`, `gsettings` and `xfconf-query`, with timeouts.
 - `cpuusage` takes two `/proc/stat` samples about 150 ms apart. `gpuusage` reads amdgpu sysfs or calls `nvidia-smi`.
 - Hardware modules read `/proc` and `/sys`. Where those are restricted (containers, proot, Android), the affected modules are skipped.
@@ -431,7 +434,7 @@ Diagnostics go to stderr before the output.
 | `Warning` | Configuration, logo or module-selection problem | Always |
 | `Info` | Loaded config path, modules that do not apply to this system | Only with `--debug` or `--show-errors` |
 
-- `--debug` (or `NIXFETCH_DEBUG=1`) also adds the underlying error or panic stack.
+- `--debug` (or `HEXFETCH_DEBUG=1`) also adds the underlying error or panic stack.
 - `--quiet` hides all diagnostics.
 - Diagnostic colors are used only when stderr is a terminal.
 - Modules that do not apply to the system are skipped silently.
@@ -449,11 +452,13 @@ Diagnostics go to stderr before the output.
 | Variable | Effect |
 | --- | --- |
 | `NO_COLOR` | Any non-empty value disables ANSI colors |
-| `NIXFETCH_DEBUG` | `1` or `true` enables `--debug` |
-| `NIXFETCH_PUBLIC_IP_URL` | Default endpoint of `publicip` |
-| `NIXFETCH_WEATHER_URL` | Default endpoint of `weather` |
+| `HEXFETCH_DEBUG` | `1` or `true` enables `--debug` |
+| `HEXFETCH_PUBLIC_IP_URL` | Default endpoint of `publicip` |
+| `HEXFETCH_WEATHER_URL` | Default endpoint of `weather` |
 | `COLORTERM`, `TERM` | Color depth detection |
 | `COLUMNS` | Last-resort terminal width |
+
+The old `NIXFETCH_DEBUG`, `NIXFETCH_PUBLIC_IP_URL` and `NIXFETCH_WEATHER_URL` names still work as deprecated fallbacks.
 
 ## Platform support
 

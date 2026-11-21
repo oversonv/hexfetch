@@ -48,3 +48,7 @@ go.work.sum
 /.opencode/
 
 /releases/
+
+# Personal configs must never be committed
+/config.yaml
+/hexfetch.yaml

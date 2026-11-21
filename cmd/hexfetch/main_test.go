@@ -104,19 +104,19 @@ func TestRunNoColorRendersSingleEmbeddedLogo(t *testing.T) {
 	}
 }
 
-func TestRunGenConfigUsesHexfetchYAMLPath(t *testing.T) {
+func TestRunGenConfigUsesHexHexfetchYAMLPath(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	if code := run([]string{"--gen-config"}); code != 0 {
 		t.Fatalf("run(--gen-config) = %d, want 0", code)
 	}
-	path := home + "/hexfetch/config.yaml"
+	path := home + "/hex/hexfetch.yaml"
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("generated config is missing: %v", err)
 	}
-	if !strings.HasPrefix(string(data), "hexfetch:\n") {
+	if !strings.Contains(string(data), "\nhexfetch:\n") {
 		t.Fatalf("generated config does not contain YAML namespace: %s", data)
 	}
 	if strings.Contains(string(data), "\n  logo:\n") {
@@ -127,8 +127,8 @@ func TestRunGenConfigUsesHexfetchYAMLPath(t *testing.T) {
 func TestRunGenConfigDoesNotOverwriteExistingFile(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	path := home + "/hexfetch/config.yaml"
-	if err := os.MkdirAll(home+"/hexfetch", 0o755); err != nil {
+	path := home + "/hex/hexfetch.yaml"
+	if err := os.MkdirAll(home+"/hex", 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(path, []byte("existing"), 0o644); err != nil {
@@ -148,7 +148,7 @@ func TestDefaultConfigurationRendersTitleAndSeparator(t *testing.T) {
 	var diagnostics diag.Collector
 	specs := buildSpecs(cfg, nil, false, false, &diagnostics)
 	if len(specs) < 2 || specs[0].Name != "title" || specs[1].Name != "separator" {
-		t.Fatalf("default specs begin with %q, want title and separator", specs)
+		t.Fatalf("default specs begin with %+v, want title and separator", specs)
 	}
 	entries, moduleDiagnostics := modules.RunAll(specs[:2])
 	if len(moduleDiagnostics) != 0 {
@@ -216,7 +216,7 @@ func TestRunMigrateConfigPreservesLegacyTOML(t *testing.T) {
 	if code := run([]string{"--migrate-config", "--quiet"}); code != 0 {
 		t.Fatalf("run(--migrate-config) = %d", code)
 	}
-	destination := home + "/hexfetch/config.yaml"
+	destination := home + "/hex/hexfetch.yaml"
 	loaded, diagnostics := config.Load(destination)
 	if loaded.Display.Separator != " :: " || loaded.Modules.Settings["title"].Format != "Migrated" {
 		t.Fatalf("migrated configuration = %+v, %+v", loaded.Display, loaded.Modules.Settings)
@@ -247,8 +247,8 @@ func TestNoColorEnvironmentIsConsistent(t *testing.T) {
 func TestRunLoadsYAMLAndRendersConfiguredTitleSeparatorWithStructure(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	path := home + "/hexfetch/config.yaml"
-	if err := os.MkdirAll(home+"/hexfetch", 0o755); err != nil {
+	path := home + "/hex/hexfetch.yaml"
+	if err := os.MkdirAll(home+"/hex", 0o755); err != nil {
 		t.Fatal(err)
 	}
 	document := "hexfetch:\n  modules:\n    items:\n      - title\n      - separator\n    title:\n      format: \"Config title\"\n"
@@ -272,8 +272,8 @@ func TestRunFormatWarningsUseDiagnosticsAndRespectQuiet(t *testing.T) {
 	modules.Register(formatWarningModule{})
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	path := home + "/hexfetch/config.yaml"
-	if err := os.MkdirAll(home+"/hexfetch", 0o755); err != nil {
+	path := home + "/hex/hexfetch.yaml"
+	if err := os.MkdirAll(home+"/hex", 0o755); err != nil {
 		t.Fatal(err)
 	}
 	document := "hexfetch:\n  modules:\n    items:\n      - format-warning-test\n    format-warning-test:\n      format: \"{unknown}\"\n"

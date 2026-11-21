@@ -57,16 +57,6 @@ func hasWarning(diagnostics []diag.Diagnostic, text string) bool {
 	return false
 }
 
-func TestRepositoryYAMLMatchesDefaultYAML(t *testing.T) {
-	data, err := os.ReadFile(filepath.Join("..", "..", "config.yaml"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(data) != DefaultYAML {
-		t.Fatalf("repository config.yaml differs from DefaultYAML")
-	}
-}
-
 func TestDefaultEnablesTitleBeforeSeparator(t *testing.T) {
 	cfg := Default()
 	if len(cfg.Modules.Items) < 2 || cfg.Modules.Items[0] != "title" || cfg.Modules.Items[1] != "separator" {
@@ -86,10 +76,10 @@ func TestDefaultEnablesTitleBeforeSeparator(t *testing.T) {
 	}
 }
 
-func TestDefaultPathUsesHexfetchDirectory(t *testing.T) {
+func TestDefaultPathUsesHexDirectory(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	want := filepath.Join(home, "hexfetch", "config.yaml")
+	want := filepath.Join(home, "hex", "hexfetch.yaml")
 	if got := DefaultPath(); got != want {
 		t.Fatalf("DefaultPath() = %q, want %q", got, want)
 	}
@@ -266,7 +256,7 @@ func TestInvalidModuleFieldsPreserveDefaultsAndValidNeighbors(t *testing.T) {
 		"hexfetch.modules.title.format",
 		"hexfetch.modules.command.key",
 		"hexfetch.modules.command.options",
-		"hexfetch.modules.localip.interface",
+		"hexfetch.modules.localip.options.interface",
 		"hexfetch.modules.localip.options.fammily",
 		"hexfetch.modules.localip.options.extra",
 		"hexfetch.modules.localip.options.exclude[1]",
@@ -552,7 +542,7 @@ func TestGenerateCreatesDirectoryAndDoesNotOverwrite(t *testing.T) {
 func TestLoadUsesHomeHexfetchConfig(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	path := filepath.Join(home, "hexfetch", "config.yaml")
+	path := filepath.Join(home, "hex", "hexfetch.yaml")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -604,7 +594,7 @@ func TestMigrateLegacyTOMLToYAMLPreservesSourceAndSupportedSettings(t *testing.T
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	source := filepath.Join(home, "nixos", "nixos.toml")
-	destination := filepath.Join(home, "hexfetch", "config.yaml")
+	destination := filepath.Join(home, "hex", "hexfetch.yaml")
 	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -927,5 +917,77 @@ func TestLoadInvalidKeyTypeKeepsDefault(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("missing warning for invalid key type: %+v", diagnostics)
+	}
+}
+
+func TestEmbeddedDefaultYAMLIsNotEmpty(t *testing.T) {
+	if !strings.Contains(DefaultYAML, "\nhexfetch:\n") {
+		t.Fatalf("embedded default.yaml has no hexfetch section: %q", DefaultYAML)
+	}
+}
+
+func TestDeprecatedNixfetchRootIsAliasedWithWarning(t *testing.T) {
+	cfg, diagnostics := Load(writeYAML(t, "nixfetch:\n  display:\n    separator: \" :: \"\n"))
+	if cfg.Display.Separator != " :: " {
+		t.Fatalf("separator = %q, want the value from the nixfetch root", cfg.Display.Separator)
+	}
+	if !hasWarning(diagnostics, "deprecated") {
+		t.Fatalf("missing deprecation warning: %+v", diagnostics)
+	}
+	if hasWarning(diagnostics, "Unknown config field") || hasWarning(diagnostics, "not found") {
+		t.Fatalf("alias still reports an unknown root: %+v", diagnostics)
+	}
+}
+
+func TestEmptyConfigFileIsNotAnError(t *testing.T) {
+	cfg, diagnostics := Load(writeYAML(t, "# only a comment\n"))
+	if !reflect.DeepEqual(cfg, Default()) {
+		t.Fatalf("empty config changed defaults: %+v", cfg)
+	}
+	for _, diagnostic := range diagnostics {
+		if diagnostic.Level != diag.Info {
+			t.Fatalf("empty config produced %+v", diagnostic)
+		}
+	}
+}
+
+func TestMissingExplicitConfigPathWarns(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "missing.yaml")
+	_, diagnostics := Load(missing)
+	if !hasWarning(diagnostics, "not found") {
+		t.Fatalf("explicit missing path did not warn: %+v", diagnostics)
+	}
+}
+
+func TestYAMLErrorMessageContainsReason(t *testing.T) {
+	_, diagnostics := Load(writeYAML(t, "hexfetch:\n  display: [\n"))
+	for _, diagnostic := range diagnostics {
+		if diagnostic.Level == diag.Warning && strings.Contains(diagnostic.Message, "YAML parsing error") {
+			if !strings.Contains(diagnostic.Message, "yaml:") {
+				t.Fatalf("message has no parser reason: %q", diagnostic.Message)
+			}
+			return
+		}
+	}
+	t.Fatalf("missing YAML parsing warning: %+v", diagnostics)
+}
+
+func TestMigrationKeepsKeyTypeAndKeyIcon(t *testing.T) {
+	directory := t.TempDir()
+	source := filepath.Join(directory, "legacy.toml")
+	destination := filepath.Join(directory, "hexfetch.yaml")
+	legacy := "[hexfetch.display.key]\ntype = \"both\"\n\n[hexfetch.modules]\nitems = [\"os\"]\n\n[hexfetch.modules.os]\nkey_icon = \"X\"\n"
+	if err := os.WriteFile(source, []byte(legacy), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := MigrateLegacyTOML(source, destination); err != nil {
+		t.Fatal(err)
+	}
+	loaded, _ := Load(destination)
+	if loaded.Display.KeyType != "both" {
+		t.Fatalf("migrated KeyType = %q, want both", loaded.Display.KeyType)
+	}
+	if got := loaded.Modules.Settings["os"].KeyIcon; got != "X" {
+		t.Fatalf("migrated KeyIcon = %q, want X", got)
 	}
 }

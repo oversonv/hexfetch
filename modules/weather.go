@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 )
@@ -26,7 +25,7 @@ func (weather) OptionSchema() map[string]OptionDefinition {
 const defaultWeatherURL = "https://wttr.in/?format=%l:+%c+%t"
 
 func (weather) Run(ctx Context) ([]Entry, error) {
-	endpoint := ctx.OptionString("url", os.Getenv("NIXFETCH_WEATHER_URL"))
+	endpoint := ctx.OptionString("url", envFirst("HEXFETCH_WEATHER_URL", "NIXFETCH_WEATHER_URL"))
 	if endpoint == "" {
 		endpoint = defaultWeatherURL
 	}
