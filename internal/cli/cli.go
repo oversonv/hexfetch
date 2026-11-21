@@ -47,7 +47,7 @@ func Parse(args []string) (Options, error) {
 	separator := set.String("separator", " » ", "Separator between key and value")
 	colorKeys := set.Int("color-keys", 4, "ANSI 256-color index for module keys (0-255)")
 	keyType := set.String("key-type", "string", "Key display: string, icon or both")
-	logoColors := set.String("logo-colors", "", "Comma-separated 38;2;R;G;B colors for the hexos logo: 12 (start and end of 6 bands), 2 (start and end) or 1 (flat)")
+	logoColors := set.String("logo-colors", "", "Comma-separated 38;2;R;G;B colors for the nixos_average logo: 12 (start and end of 6 bands), 2 (start and end) or 1 (flat)")
 	set.BoolVar(&o.NoColor, "no-color", false, "Disable all colors")
 	set.BoolVar(&o.GenConfig, "gen-config", false, "Write the default config file")
 	set.BoolVar(&o.MigrateConfig, "migrate-config", false, "Convert the legacy TOML config to YAML without changing the original")

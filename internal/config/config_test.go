@@ -1120,12 +1120,12 @@ func TestMigrationKeepsKeyTypeAndKeyIcon(t *testing.T) {
 	}
 }
 
-func TestDefaultLogoIsHexos(t *testing.T) {
-	if got := Default().Logo; got != "hexos" {
-		t.Fatalf("Default().Logo = %q, want hexos", got)
+func TestDefaultLogoIsNixosAverage(t *testing.T) {
+	if got := Default().Logo; got != "nixos_average" {
+		t.Fatalf("Default().Logo = %q, want nixos_average", got)
 	}
-	if !strings.Contains(DefaultYAML, "\n  logo: hexos\n") {
-		t.Fatal("DefaultYAML does not select the hexos logo")
+	if !strings.Contains(DefaultYAML, "\n  logo: nixos_average\n") {
+		t.Fatal("DefaultYAML does not select the nixos_average logo")
 	}
 }
 
@@ -1135,7 +1135,7 @@ func TestLogoNameFromYAML(t *testing.T) {
 		t.Fatalf("logo = %q, diagnostics = %+v", cfg.Logo, diagnostics)
 	}
 	cfg, diagnostics = Load(writeYAML(t, "hexfetch:\n  logo: 5\n"))
-	if cfg.Logo != "hexos" || !hasWarning(diagnostics, "hexfetch.logo") {
+	if cfg.Logo != "nixos_average" || !hasWarning(diagnostics, "hexfetch.logo") {
 		t.Fatalf("invalid logo changed the default: %q, diagnostics = %+v", cfg.Logo, diagnostics)
 	}
 }
@@ -1187,7 +1187,7 @@ func TestLogoColorsEmptyListKeepsVanillaColors(t *testing.T) {
 }
 
 func TestLogoColorsMissingKeepsVanillaColors(t *testing.T) {
-	cfg, _ := Load(writeYAML(t, "hexfetch:\n  logo: hexos\n"))
+	cfg, _ := Load(writeYAML(t, "hexfetch:\n  logo: nixos_average\n"))
 	if !reflect.DeepEqual(cfg.LogoColors, logo.DefaultColors()) {
 		t.Fatalf("missing logo_colors changed the colors: %+v", cfg.LogoColors)
 	}

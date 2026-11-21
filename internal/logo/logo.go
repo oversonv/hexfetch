@@ -5,7 +5,7 @@
 // that format:
 //
 //   - classic logos use flat colors per slot taken from logo/colors.txt;
-//   - profile logos (currently only hexos) map each slot to a band with its own
+//   - profile logos (currently only nixos_average) map each slot to a band with its own
 //     gradient geometry and two configurable endpoint colors.
 package logo
 
@@ -19,7 +19,7 @@ import (
 )
 
 // DefaultName is the logo used when nothing else is configured.
-const DefaultName = "hexos"
+const DefaultName = "nixos_average"
 
 type Logo struct {
 	Lines  []string
@@ -37,8 +37,8 @@ type bandGradient struct {
 	t1 float64
 }
 
-// gradients holds the geometry of the hexos bands. Band n is color slot n+1 in
-// logo/ascii/h/hexos.txt and uses colors[2n] (start) and colors[2n+1] (end).
+// gradients holds the geometry of the nixos_average bands. Band n is color slot n+1 in
+// logo/ascii/n/nixos_average.txt and uses colors[2n] (start) and colors[2n+1] (end).
 var gradients = [...]bandGradient{
 	{-0.816, -0.578, -25.36, -8.16},
 	{-0.781, -0.625, -35.76, -16.4},
@@ -77,7 +77,7 @@ func DefaultColors() [12]gradient.RGB {
 	}
 }
 
-// Render paints the hexos logo. It cannot fail: the logo is embedded.
+// Render paints the nixos_average logo. It cannot fail: the logo is embedded.
 func Render(colors [12]gradient.RGB, color, trueColor bool) Logo {
 	loaded, err := Load(DefaultName, colors, color, trueColor)
 	if err != nil {

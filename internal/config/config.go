@@ -227,7 +227,7 @@ func decodeLogo(section map[string]any, cfg *Config, source string, diagnostics 
 }
 
 // decodeLogoColors reads hexfetch.logo_colors. The list has 12 colors (a start
-// and an end color for each of the six hexos bands), 2 colors (one start and
+// and an end color for each of the six nixos_average bands), 2 colors (one start and
 // one end color shared by all bands) or 1 color (a flat logo). A missing or
 // empty list keeps the vanilla colors.
 func decodeLogoColors(section map[string]any, cfg *Config, source string, diagnostics *[]diag.Diagnostic) {

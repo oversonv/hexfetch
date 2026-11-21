@@ -11,7 +11,7 @@ import (
 
 var leakedMarker = regexp.MustCompile(`\$[1-9]`)
 
-func TestCatalogContainsHexosAndManyLogos(t *testing.T) {
+func TestCatalogContainsNixosAverageAndManyLogos(t *testing.T) {
 	names := Names()
 	if len(names) < 500 {
 		t.Fatalf("catalog has %d logos, want at least 500", len(names))
@@ -63,11 +63,11 @@ func TestLoadUnknownLogo(t *testing.T) {
 func TestResolveAndAliases(t *testing.T) {
 	names, aliases := Names(), Aliases()
 	for query, want := range map[string]string{
-		"hexos":    "hexos",
-		"HexOS":    "hexos",
-		"hex":      "hexos",
-		"hexfetch": "hexos",
-		"amzn":     "amazon_linux",
+		"nixos_average": "nixos_average",
+		"HexOS":         "nixos_average",
+		"hex":           "nixos_average",
+		"hexfetch":      "nixos_average",
+		"amzn":          "amazon_linux",
 	} {
 		got, ok := Resolve(names, aliases, query)
 		if !ok || got != want {
@@ -90,27 +90,27 @@ func TestDetectUsesIDThenIDLike(t *testing.T) {
 	}
 }
 
-func TestHasProfileOnlyForHexos(t *testing.T) {
-	if !HasProfile("hexos") {
-		t.Fatal("hexos must use the gradient profile")
+func TestHasProfileOnlyForNixosAverage(t *testing.T) {
+	if !HasProfile("nixos_average") {
+		t.Fatal("nixos_average must use the gradient profile")
 	}
 	if HasProfile("arch") {
 		t.Fatal("classic logo reports a gradient profile")
 	}
 }
 
-func TestHexosUsesConfiguredColorsAndClassicIgnoresThem(t *testing.T) {
+func TestNixosAverageUsesConfiguredColorsAndClassicIgnoresThem(t *testing.T) {
 	custom := DefaultColors()
 	for index := range custom {
 		custom[index] = gradient.RGB{R: 1, G: 2, B: 3}
 	}
-	vanilla, _ := Load("hexos", DefaultColors(), true, true)
-	changed, _ := Load("hexos", custom, true, true)
+	vanilla, _ := Load("nixos_average", DefaultColors(), true, true)
+	changed, _ := Load("nixos_average", custom, true, true)
 	if strings.Join(vanilla.Lines, "\n") == strings.Join(changed.Lines, "\n") {
-		t.Fatal("hexos ignored the configured colors")
+		t.Fatal("nixos_average ignored the configured colors")
 	}
 	if !strings.Contains(strings.Join(changed.Lines, "\n"), "\x1b[38;2;1;2;3m") {
-		t.Fatal("hexos did not use the flat configured color")
+		t.Fatal("nixos_average did not use the flat configured color")
 	}
 	a, _ := Load("arch", DefaultColors(), true, true)
 	b, _ := Load("arch", custom, true, true)

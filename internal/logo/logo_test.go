@@ -136,14 +136,14 @@ func TestRenderUsesANSI256Fallback(t *testing.T) {
 	}
 }
 
-func TestHexosMaskMatchesReferenceBands(t *testing.T) {
-	text, err := readArt("hexos")
+func TestNixosAverageMaskMatchesReferenceBands(t *testing.T) {
+	text, err := readArt("nixos_average")
 	if err != nil {
 		t.Fatal(err)
 	}
 	lines := strings.Split(text, "\n")
 	if len(lines) != len(referenceBands) {
-		t.Fatalf("hexos has %d lines, reference bands have %d", len(lines), len(referenceBands))
+		t.Fatalf("nixos_average has %d lines, reference bands have %d", len(lines), len(referenceBands))
 	}
 	current := 0
 	for y, line := range lines {
@@ -154,7 +154,7 @@ func TestHexosMaskMatchesReferenceBands(t *testing.T) {
 				continue
 			}
 			if c.x >= len(referenceBands[y]) || int(referenceBands[y][c.x]-'0') != c.slot {
-				t.Fatalf("hexos cell (%d,%d) has slot %d, reference band %q", c.x, y, c.slot, referenceBands[y])
+				t.Fatalf("nixos_average cell (%d,%d) has slot %d, reference band %q", c.x, y, c.slot, referenceBands[y])
 			}
 		}
 	}

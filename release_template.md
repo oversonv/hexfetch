@@ -27,7 +27,7 @@ Static binaries without dependencies. Pick the file for your platform in the Ass
 
 ## Licenses
 
-`LICENSE` and `THIRD_PARTY_LICENSES` are attached to this release. The same texts are embedded in the binary: run `hexfetch --licenses`.
+`LICENSE` and `THIRD_PARTY_LICENSES` are attached to this release. The same texts are embedded in the binary: run `hexfetch --licenses`. The default `nixos_average` logo is an adaptation of the NixOS logo (CC BY 4.0), credited in `THIRD_PARTY_LICENSES`.
 
 ## Quick start
 

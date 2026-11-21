@@ -4,7 +4,7 @@
 
 **A fast system information fetch for Linux, in a single static Go binary.**
 
-Gradient hexos logo + 530 embedded distro logos · 62 modules · YAML configuration · x86, ARM, RISC-V and Termux
+Gradient nixos_average logo + 530 embedded distro logos · 62 modules · YAML configuration · x86, ARM, RISC-V and Termux
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Platform: Linux](https://img.shields.io/badge/platform-linux-informational)
@@ -24,7 +24,7 @@ Gradient hexos logo + 530 embedded distro logos · 62 modules · YAML configurat
 - **One file.** A 7–8 MiB binary with no runtime dependencies. Linux builds are fully static (`CGO_ENABLED=0`).
 - **Six targets.** `linux-amd64`, `linux-arm64`, `linux-armv7`, `linux-386`, `linux-riscv64` and `android-arm64` (Termux).
 - **62 modules** that run concurrently: system, software, desktop, hardware, network and media.
-- **Logos.** The default `hexos` logo has six gradient bands and 1, 2 or 12 configurable colors. 530+ distribution logos are embedded too (`--logo NAME`, `--logo auto`). Falls back to ANSI 256 colors automatically.
+- **Logos.** The default `nixos_average` logo has six gradient bands and 1, 2 or 12 configurable colors. 530+ distribution logos are embedded too (`--logo NAME`, `--logo auto`). Falls back to ANSI 256 colors automatically.
 - **Predictable configuration.** One YAML file; CLI flags override it; unknown or invalid settings produce a warning instead of a silent failure.
 - **Terminal-aware.** Output is clipped to the terminal width and the logo hides itself when there is no room.
 - **Tested without your hardware.** Module tests run against fixtures in `modules/testdata`.
@@ -88,10 +88,10 @@ Boolean flags also accept `=true` or `=false`.
 | --- | --- | --- |
 | `-c, --config PATH` | `$HOME/hex/set/hexfetch.yaml` | Personal YAML config file. Also the destination for `--gen-config` and `--migrate-config` |
 | `-s, --structure LIST` | from config | Colon-separated modules to print. Selection and order only; module settings still come from YAML |
-| `-l, --logo NAME` | `hexos` | Logo name or alias, `auto` (from `/etc/os-release`) or `none` |
+| `-l, --logo NAME` | `nixos_average` | Logo name or alias, `auto` (from `/etc/os-release`) or `none` |
 | `-p, --logo-position SIDE` | `left` | Logo side: `left` or `right` |
 | `--padding N` | `2` | Spaces between the logo and the modules |
-| `--logo-colors LIST` | built-in | `hexos` only: 12, 2 or 1 comma-separated `38;2;R;G;B` values |
+| `--logo-colors LIST` | built-in | `nixos_average` only: 12, 2 or 1 comma-separated `38;2;R;G;B` values |
 | `--separator STR` | `" » "` | Separator between key and value |
 | `--key-type TYPE` | `string` | Key display: `string`, `icon` or `both` |
 | `--color-keys N` | `4` | ANSI 256-color index for module keys (0–255) |
@@ -130,8 +130,8 @@ A Termux-style profile (Fastfetch-like icons, Python version via the `command` m
 # Create that file with: hexfetch --gen-config
 hexfetch:
   # Logo name, "auto" (pick from /etc/os-release) or "none". List names with: hexfetch --list-logos
-  logo: hexos
-  # Colors of the hexos logo only; other logos use their own flat colors.
+  logo: nixos_average
+  # Colors of the nixos_average logo only; other logos use their own flat colors.
   # 12 colors: start and end color of each of the 6 gradient bands (the vanilla colors below).
   # 2 colors: one start and one end color shared by all bands. 1 color: a flat logo.
   # Remove the list to use the vanilla colors.
@@ -182,8 +182,8 @@ Everything lives under the `hexfetch` key (the old `nixfetch` key is still accep
 
 | Key | Type | Description |
 | --- | --- | --- |
-| `logo` | string | `hexos` (default), any logo name or alias, `auto` or `none` ([Logo and colors](#logo-and-colors)) |
-| `logo_colors` | list of 1, 2 or 12 SGR strings | `hexos` gradient colors ([Logo and colors](#logo-and-colors)) |
+| `logo` | string | `nixos_average` (default), any logo name or alias, `auto` or `none` ([Logo and colors](#logo-and-colors)) |
+| `logo_colors` | list of 1, 2 or 12 SGR strings | `nixos_average` gradient colors ([Logo and colors](#logo-and-colors)) |
 | `display.separator` | string | Text between key and value |
 | `display.separator_char` | string | Character used by `separator` modules (default `-`) |
 | `display.color.keys` / `title` / `output` / `separator` | color | Colors of keys, title, values and separator lines |
@@ -304,14 +304,14 @@ The migration validates the converted settings and writes only supported, normal
 
 ## Logo and colors
 
-All logos are embedded in the binary (`logo/ascii/<letter>/<name>.txt`); hexfetch reads no logo files from disk. The default is `hexos`. Choose another one with `logo:` in YAML or `--logo`:
+All logos are embedded in the binary (`logo/ascii/<letter>/<name>.txt`); hexfetch reads no logo files from disk. The default is `nixos_average`. Choose another one with `logo:` in YAML or `--logo`:
 
 - `--list-logos` prints every name. Aliases such as `amzn` or `hex` resolve to their logo.
-- `auto` picks the logo from `/etc/os-release` (`ID`, `ID_LIKE`, `NAME`). If nothing matches, `hexos` is used.
+- `auto` picks the logo from `/etc/os-release` (`ID`, `ID_LIKE`, `NAME`). If nothing matches, `nixos_average` is used.
 - `none` prints no logo.
-- An unknown name prints a warning and `hexos` is used.
+- An unknown name prints a warning and `nixos_average` is used.
 
-**hexos colors.** The `hexos` logo has six gradient bands with fixed geometry and direction. Only the endpoint colors are configurable through `logo_colors` (or `--logo-colors`):
+**nixos_average colors.** The `nixos_average` logo has six gradient bands with fixed geometry and direction. Only the endpoint colors are configurable through `logo_colors` (or `--logo-colors`):
 
 | Values | Meaning |
 | --- | --- |
@@ -332,7 +332,7 @@ hexfetch --logo-colors "38;2;255;94;98"                     # flat coral
 - Other logos use the flat colors from `logo/colors.txt` and ignore `logo_colors`.
 - Spaces are never colored, and every colored line ends with an ANSI reset.
 
-**Logo file format.** `$1`..`$9` switch to the corresponding color slot and `$$` prints a literal `$`. For classic logos each slot is one flat color from `logo/colors.txt` (`name=sgr:34,sgr:37` or `name=79;157;207`). For `hexos`, slot `n` is gradient band `n-1`.
+**Logo file format.** `$1`..`$9` switch to the corresponding color slot and `$$` prints a literal `$`. For classic logos each slot is one flat color from `logo/colors.txt` (`name=sgr:34,sgr:37` or `name=79;157;207`). For `nixos_average`, slot `n` is gradient band `n-1`.
 
 **Color depth.** hexfetch uses truecolor when `COLORTERM` is `truecolor` or `24bit`. Otherwise it also uses truecolor unless `TERM` is one of `linux`, `dumb`, `vt100`, `vt220`, `ansi` or `screen`, in which case the logo is converted to the nearest ANSI 256-color codes.
 
@@ -509,7 +509,7 @@ cmd/hexfetch/      entry point and main flow
 internal/cli/      flag parsing
 internal/config/   YAML loading, validation, TOML migration
 internal/gradient/ gradient math and color-depth detection
-internal/logo/     logo catalog, parser and painters (classic and hexos)
+internal/logo/     logo catalog, parser and painters (classic and nixos_average)
 logo/              embedded logo art, colors.txt, aliases.txt
 internal/render/   layout, clipping, terminal width
 internal/diag/     diagnostics collector and printer
@@ -522,10 +522,10 @@ modules/           one file per module, plus testdata/ fixtures
 
 ## Credits
 
-The distribution logos are derived from the [fastfetch](https://github.com/fastfetch-cli/fastfetch) project (MIT License). See [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES). The `hexos` logo is original to hexfetch.
+The distribution logos are derived from the [fastfetch](https://github.com/fastfetch-cli/fastfetch) project (MIT License). See [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES). The default `nixos_average` logo is a reduced adaptation of the NixOS logo: "NixOS Logo" by Simon Frankau, Tim Cuthbertson and Daniel Baker (maintained by the NixOS Marketing Team), from [nixos/branding](https://github.com/NixOS/branding), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Changes: redrawn at a smaller size with block characters and painted with configurable gradient colors. The adaptation is distributed under CC BY 4.0, not under the MIT license of the code. NixOS is a trademark of the NixOS Foundation.
 
-hexfetch is an independent project and is not affiliated with or endorsed by fastfetch. Distribution names and logos belong to their respective owners and are included for identification only. Notices for all bundled third-party code and data, including the Go dependencies, are in [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) and are embedded in every binary: `hexfetch --licenses`.
+hexfetch is an independent project and is not affiliated with or endorsed by fastfetch, the NixOS Foundation or the NixOS project. Distribution names and logos belong to their respective owners and are included for identification only. Notices for all bundled third-party code and data, including the Go dependencies, are in [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) and are embedded in every binary: `hexfetch --licenses`.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Code: MIT, see [LICENSE](LICENSE). The `nixos_average` logo: CC BY 4.0, see [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES).

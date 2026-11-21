@@ -1,8 +1,9 @@
 hexfetch embeds ASCII logos derived from the fastfetch project
-(logo/ascii/**, logo/colors.txt, logo/aliases.txt), except logo/ascii/h/hexos.txt,
-which is original to hexfetch.
+(logo/ascii/**, logo/colors.txt, logo/aliases.txt), except logo/ascii/n/nixos_average.txt,
+which is an adaptation of the NixOS logo (see the NixOS logo section below).
 
 fastfetch: https://github.com/fastfetch-cli/fastfetch
+Imported snapshot: fastfetch 2.71.0 (released 2026-11-06)
 
 MIT License
 
@@ -28,9 +29,54 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+Some of the logos in fastfetch originate from the neofetch project
+(https://github.com/dylanaraps/neofetch), which is also MIT licensed:
+
+The MIT License (MIT)
+
+Copyright (c) 2015-2021 Dylan Araps
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
 modules/cpuparts.go: the ARM implementer and part ID tables match the data used by
 fastfetch (MIT, above) and by the lscpu tool of util-linux
 (https://github.com/util-linux/util-linux). They contain identifier-to-name data.
+
+=== NixOS logo ===
+
+logo/ascii/n/nixos_average.txt is a reduced adaptation of the NixOS logo.
+
+"NixOS Logo" by Simon Frankau, Tim Cuthbertson and Daniel Baker (maintained by
+the NixOS Marketing Team), from nixos/branding (https://github.com/NixOS/branding),
+licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
+
+Changes: nixos_average.txt is redrawn at a smaller size with Unicode block
+characters and painted with configurable gradient colors instead of the two
+original blues.
+
+nixos_average.txt is distributed under CC BY 4.0, not under the MIT license that
+covers the hexfetch code. The other nixos*.txt logos come from fastfetch (MIT
+notice above); the attribution above applies to the NixOS logo they depict.
+
+NixOS is a trademark of the NixOS Foundation. hexfetch is not affiliated with,
+sponsored or endorsed by the NixOS Foundation or the NixOS project. This notice
+grants no trademark rights.
 
 === Go dependencies (compiled into the binary) ===
 

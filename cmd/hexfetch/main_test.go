@@ -306,35 +306,35 @@ func TestRunFormatWarningsUseDiagnosticsAndRespectQuiet(t *testing.T) {
 
 func logoText(l logo.Logo) string { return strings.Join(l.Lines, "\n") }
 
-func TestLoadLogoDefaultsToHexos(t *testing.T) {
+func TestLoadLogoDefaultsToNixosAverage(t *testing.T) {
 	var diagnostics diag.Collector
 	got := loadLogo(config.Default(), false, &diagnostics)
 	want := logo.Render(logo.DefaultColors(), false, gradient.TrueColor())
 	if logoText(got) != logoText(want) || len(diagnostics.All()) != 0 {
-		t.Fatalf("default logo is not hexos; diagnostics: %+v", diagnostics.All())
+		t.Fatalf("default logo is not nixos_average; diagnostics: %+v", diagnostics.All())
 	}
 }
 
 func TestLoadLogoResolvesNamesAndAliases(t *testing.T) {
-	hexos := logoText(loadLogo(config.Default(), false, &diag.Collector{}))
+	average := logoText(loadLogo(config.Default(), false, &diag.Collector{}))
 	cfg := config.Default()
 	cfg.Logo = "arch"
-	if arch := logoText(loadLogo(cfg, false, &diag.Collector{})); arch == hexos || arch == "" {
+	if arch := logoText(loadLogo(cfg, false, &diag.Collector{})); arch == average || arch == "" {
 		t.Fatal("--logo arch did not select a different logo")
 	}
 	cfg.Logo = "HEX"
-	if got := logoText(loadLogo(cfg, false, &diag.Collector{})); got != hexos {
-		t.Fatal("alias hex did not resolve to hexos")
+	if got := logoText(loadLogo(cfg, false, &diag.Collector{})); got != average {
+		t.Fatal("alias hex did not resolve to nixos_average")
 	}
 }
 
-func TestLoadLogoUnknownNameFallsBackToHexosWithWarning(t *testing.T) {
+func TestLoadLogoUnknownNameFallsBackToNixosAverageWithWarning(t *testing.T) {
 	var diagnostics diag.Collector
 	cfg := config.Default()
 	cfg.Logo = "definitely-not-a-distro"
 	got := loadLogo(cfg, false, &diagnostics)
 	if logoText(got) != logoText(logo.Render(logo.DefaultColors(), false, gradient.TrueColor())) {
-		t.Fatal("unknown logo did not fall back to hexos")
+		t.Fatal("unknown logo did not fall back to nixos_average")
 	}
 	warned := false
 	for _, d := range diagnostics.All() {
@@ -357,14 +357,14 @@ func TestLoadLogoNoneAndAuto(t *testing.T) {
 	}
 }
 
-func TestLoadLogoCustomColorsAffectOnlyHexos(t *testing.T) {
+func TestLoadLogoCustomColorsAffectOnlyNixosAverage(t *testing.T) {
 	cfg := config.Default()
 	for index := range cfg.LogoColors {
 		cfg.LogoColors[index] = gradient.RGB{R: 9, G: 8, B: 7}
 	}
-	hexos := logoText(loadLogo(cfg, true, &diag.Collector{}))
-	if !strings.Contains(hexos, "9;8;7") && !strings.Contains(hexos, "38;5;") {
-		t.Fatalf("hexos ignored custom colors: %q", hexos)
+	average := logoText(loadLogo(cfg, true, &diag.Collector{}))
+	if !strings.Contains(average, "9;8;7") && !strings.Contains(average, "38;5;") {
+		t.Fatalf("nixos_average ignored custom colors: %q", average)
 	}
 	cfg.Logo = "arch"
 	custom := logoText(loadLogo(cfg, true, &diag.Collector{}))
@@ -391,8 +391,8 @@ func TestRunListLogos(t *testing.T) {
 		}
 	})
 	lines := strings.Split(strings.TrimSpace(output), "\n")
-	if len(lines) < 500 || !strings.Contains("\n"+output, "\nhexos\n") {
-		t.Fatalf("--list-logos printed %d names, hexos present: %v", len(lines), strings.Contains(output, "hexos"))
+	if len(lines) < 500 || !strings.Contains("\n"+output, "\nnixos_average\n") {
+		t.Fatalf("--list-logos printed %d names, nixos_average present: %v", len(lines), strings.Contains(output, "nixos_average"))
 	}
 }
 

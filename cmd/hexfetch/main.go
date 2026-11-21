@@ -177,7 +177,7 @@ func applyOverrides(cfg *config.Config, opts cli.Options, diagnostics *diag.Coll
 }
 
 // loadLogo resolves cfg.Logo ("none", "auto", a name or an alias) and paints it.
-// Unknown names and failed detection fall back to the default logo, hexos.
+// Unknown names and failed detection fall back to the default logo, nixos_average.
 func loadLogo(cfg config.Config, color bool, diagnostics *diag.Collector) logo.Logo {
 	source := strings.TrimSpace(cfg.Logo)
 	if source == "" {
