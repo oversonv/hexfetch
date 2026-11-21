@@ -64,7 +64,6 @@ func TestResolveAndAliases(t *testing.T) {
 	names, aliases := Names(), Aliases()
 	for query, want := range map[string]string{
 		"nixos_average": "nixos_average",
-		"HexOS":         "nixos_average",
 		"hex":           "nixos_average",
 		"hexfetch":      "nixos_average",
 		"amzn":          "amazon_linux",

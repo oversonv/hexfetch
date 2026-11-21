@@ -1,5 +1,4 @@
 hex=nixos_average
-hexos=nixos_average
 hexfetch=nixos_average
 Adélie=adelie
 amzn=amazon_linux
