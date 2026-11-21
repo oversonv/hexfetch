@@ -207,8 +207,43 @@ def table(files):
     return "\n".join(["| File | Size | SHA256 |", "| --- | --- | --- |", *rows])
 
 
+LICENSES = ROOT / "THIRD_PARTY_LICENSES"
+LICENSES_MARKER = "=== Go dependencies (compiled into the binary) ==="
+LICENSE_PREFIXES = ("LICENSE", "LICENCE", "COPYING", "NOTICE")
+MODULE_FORMAT = "{{if and .Module (not .Module.Main)}}{{.Module.Path}}|{{.Module.Version}}|{{.Module.Dir}}{{end}}"
+
+
+def license_text():
+    out = sh("go", "list", "-deps", "-f", MODULE_FORMAT, "./cmd/hexfetch").stdout
+    found = {}
+    for line in out.splitlines():
+        if line.strip():
+            path, version, directory = line.split("|")
+            found[path] = (version, Path(directory))
+    text = LICENSES.read_text(encoding="utf-8")
+    parts = [text.split(LICENSES_MARKER)[0].rstrip() + "\n\n" + LICENSES_MARKER + "\n"]
+    rule = "-" * 70
+    for path, (version, directory) in sorted(found.items()):
+        files = [f for f in sorted(directory.iterdir()) if f.is_file() and f.name.upper().startswith(LICENSE_PREFIXES)]
+        if not files:
+            raise Fail(f"no license file found for {path} in {directory}")
+        body = "\n\n".join(f.read_text(encoding="utf-8", errors="replace").strip() for f in files)
+        parts.append(f"\n{rule}\n{path} {version}\n{rule}\n\n{body}\n")
+    return "".join(parts)
+
+
+def update_licenses():
+    """Regenerate the Go dependency notices. True if the file changed."""
+    new = license_text()
+    if LICENSES.read_text(encoding="utf-8") == new:
+        return False
+    LICENSES.write_text(new, encoding="utf-8")
+    log("THIRD_PARTY_LICENSES updated")
+    return True
+
+
 def commit(version, tag):
-    sh("git", "add", "--", META.relative_to(ROOT))
+    sh("git", "add", "--", META.relative_to(ROOT), LICENSES.relative_to(ROOT))
     sh("git", "commit", "-m", f"release: {tag}\n\nRelease-Version: {version}\nRelease-Tag: {tag}")
 
 
@@ -292,7 +327,7 @@ def main():
     if unknown:
         raise Fail(f"unknown targets: {', '.join(unknown)}")
     branch, project = preflight()
-    sh(sys.executable, ROOT / "licenses.py", "--check")
+    licenses_changed = update_licenses()
     known = remote_tags()
     current = read_version()
     version = args.version or (current if f"v{current}" not in known else bump(current, known))
@@ -337,7 +372,7 @@ def main():
         if args.dry_run:
             log("dry run: nothing was committed or published")
             return
-        if changed:
+        if changed or licenses_changed:
             commit(version, tag)
             committed = True
         tag_and_push(branch, tag, version)
@@ -348,8 +383,11 @@ def main():
         log(f"done: https://github.com/{project}/releases/tag/{tag}")
     finally:
         shutil.rmtree(stage, ignore_errors=True)
-        if changed and not committed:
-            sh("git", "checkout", "--", META.relative_to(ROOT), check=False)
+        if not committed:
+            if changed:
+                sh("git", "checkout", "--", META.relative_to(ROOT), check=False)
+            if licenses_changed:
+                sh("git", "checkout", "--", LICENSES.relative_to(ROOT), check=False)
 
 
 if __name__ == "__main__":
