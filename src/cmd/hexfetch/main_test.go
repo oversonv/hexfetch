@@ -94,14 +94,14 @@ func TestRunQuietHidesDiagnosticsEvenWithDebug(t *testing.T) {
 
 func TestRunNoColorRendersSingleEmbeddedLogo(t *testing.T) {
 	output := captureStdout(t, func() {
-		if code := run([]string{"--no-color", "--quiet", "--structure", "title"}); code != 0 {
+		if code := run([]string{"--no-color", "--quiet", "--logo", logo.DefaultName, "--structure", "title"}); code != 0 {
 			t.Errorf("run() exit code = %d, want 0", code)
 		}
 	})
 	if strings.Contains(output, "\x1b[") {
 		t.Fatalf("--no-color output contains ANSI sequences: %q", output)
 	}
-	if !strings.Contains(output, "▄") {
+	if !strings.Contains(output, defaultLogo(t).Lines[0]) {
 		t.Fatalf("output does not contain the embedded logo: %q", output)
 	}
 }
